@@ -26,6 +26,12 @@ export default function RoomsScreen() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [showFeaturesDropdown, setShowFeaturesDropdown] = useState(false);
+  const [selectedFeatures, setSelectedFeatures] = useState([]);
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
+  const [activeFilters, setActiveFilters] = useState([]);
 
   // Sample room data with added imageUrl property
   const [rooms, setRooms] = useState([
@@ -102,6 +108,9 @@ export default function RoomsScreen() {
     }
   ]);
 
+  // All available features for filtering
+  const availableFeatures = ['TV', 'Minibar', 'Wi-Fi', 'Balkon', 'Deniz Manzarası', 'Jakuzi'];
+
   // Assign random images to rooms on component mount
   useEffect(() => {
     const roomsWithImages = rooms.map(room => ({
@@ -110,6 +119,39 @@ export default function RoomsScreen() {
     }));
     setRooms(roomsWithImages);
   }, []);
+
+  // Filter the rooms based on search text, status filter, and other filters
+  const filteredRooms = rooms.filter(room => {
+    // Filter by search text (room number)
+    if (searchText && !room.id.toLowerCase().includes(searchText.toLowerCase())) {
+      return false;
+    }
+    
+    // Filter by status
+    if (statusFilter !== 'Tümü') {
+      const statusMap = {
+        'Müsait': 'available',
+        'Dolu': 'occupied',
+        'Bakımda': 'maintenance'
+      };
+      if (room.status !== statusMap[statusFilter]) {
+        return false;
+      }
+    }
+    
+    // Filter by selected features/amenities
+    if (selectedFeatures.length > 0) {
+      for (const feature of selectedFeatures) {
+        if (!room.amenities.includes(feature)) {
+          return false;
+        }
+      }
+    }
+    
+    // Additional date filtering logic could be added here
+    
+    return true;
+  });
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -155,6 +197,95 @@ export default function RoomsScreen() {
     setModalVisible(true);
   };
 
+  const handleStatusFilter = (status) => {
+    setStatusFilter(status);
+    setShowStatusDropdown(false);
+    
+    // Update active filters
+    const newFilters = [...activeFilters.filter(f => f.type !== 'status')];
+    if (status !== 'Tümü') {
+      newFilters.push({ type: 'status', value: status });
+    }
+    setActiveFilters(newFilters);
+  };
+
+  const handleFeatureToggle = (feature) => {
+    let newSelectedFeatures;
+    if (selectedFeatures.includes(feature)) {
+      // Remove the feature
+      newSelectedFeatures = selectedFeatures.filter(f => f !== feature);
+    } else {
+      // Add the feature
+      newSelectedFeatures = [...selectedFeatures, feature];
+    }
+    setSelectedFeatures(newSelectedFeatures);
+    
+    // Update active filters
+    const newFilters = [...activeFilters.filter(f => f.type !== 'feature' || !f.value.includes(feature))];
+    if (!selectedFeatures.includes(feature)) {
+      newFilters.push({ type: 'feature', value: feature });
+    }
+    setActiveFilters(newFilters);
+  };
+
+  const handleDateChange = (date, type) => {
+    if (type === 'start') {
+      setStartDate(date);
+      // Update active filters
+      const newFilters = [...activeFilters.filter(f => f.type !== 'startDate')];
+      if (date) {
+        newFilters.push({ type: 'startDate', value: date });
+      }
+      setActiveFilters(newFilters);
+    } else {
+      setEndDate(date);
+      // Update active filters
+      const newFilters = [...activeFilters.filter(f => f.type !== 'endDate')];
+      if (date) {
+        newFilters.push({ type: 'endDate', value: date });
+      }
+      setActiveFilters(newFilters);
+    }
+  };
+
+  const removeFilter = (filterToRemove) => {
+    const newFilters = activeFilters.filter(filter => 
+      !(filter.type === filterToRemove.type && filter.value === filterToRemove.value)
+    );
+    setActiveFilters(newFilters);
+    
+    // Also update the corresponding state
+    if (filterToRemove.type === 'status') {
+      setStatusFilter('Tümü');
+    } else if (filterToRemove.type === 'feature') {
+      setSelectedFeatures(selectedFeatures.filter(f => f !== filterToRemove.value));
+    } else if (filterToRemove.type === 'startDate') {
+      setStartDate('');
+    } else if (filterToRemove.type === 'endDate') {
+      setEndDate('');
+    }
+  };
+
+  const clearAllFilters = () => {
+    setSearchText('');
+    setStatusFilter('Tümü');
+    setSelectedFeatures([]);
+    setStartDate('');
+    setEndDate('');
+    setActiveFilters([]);
+  };
+  
+  // Refresh room data
+  const refreshRooms = () => {
+    // In a real app, this would fetch data from an API
+    // For this demo, we'll just reassign images
+    const refreshedRooms = rooms.map(room => ({
+      ...room,
+      imageUrl: getRandomRoomImage()
+    }));
+    setRooms(refreshedRooms);
+  };
+
   const renderRoomCard = ({ item }) => (
     <View style={styles.roomCard}>
       <View style={[styles.roomHeader, { backgroundColor: getStatusColor(item.status) }]}>
@@ -172,7 +303,7 @@ export default function RoomsScreen() {
       
       <View style={styles.roomContent}>
         <Text style={styles.roomInfo}>• {item.capacity}</Text>
-        <Text style={styles.roomInfo}>TV • Minibar • Wi-Fi</Text>
+        <Text style={styles.roomInfo}>• {item.amenities.join(' • ')}</Text>
         
         {item.status === 'occupied' && (
           <>
@@ -361,7 +492,10 @@ export default function RoomsScreen() {
             </Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={styles.refreshButton}>
+          <TouchableOpacity 
+            style={styles.refreshButton}
+            onPress={refreshRooms}
+          >
             <MaterialIcons name="refresh" size={20} color="#3C3169" />
             <Text style={styles.refreshText}>YENİLE</Text>
           </TouchableOpacity>
@@ -377,7 +511,10 @@ export default function RoomsScreen() {
           />
           
           <View style={styles.filterRow}>
-            <TouchableOpacity style={styles.statusFilter}>
+            <TouchableOpacity 
+              style={styles.statusFilter}
+              onPress={() => setShowStatusDropdown(!showStatusDropdown)}
+            >
               <Text style={styles.filterText}>{statusFilter}</Text>
               <MaterialIcons name="arrow-drop-down" size={24} color="#333" />
             </TouchableOpacity>
@@ -390,6 +527,34 @@ export default function RoomsScreen() {
               <Text style={styles.advancedFilterText}>GELİŞMİŞ FİLTRELER</Text>
             </TouchableOpacity>
           </View>
+          
+          {/* Status Dropdown */}
+          {showStatusDropdown && (
+            <View style={styles.dropdownMenu}>
+              {['Tümü', 'Müsait', 'Dolu', 'Bakımda'].map((status) => (
+                <TouchableOpacity 
+                  key={status} 
+                  style={[
+                    styles.dropdownItem,
+                    statusFilter === status && styles.selectedDropdownItem
+                  ]}
+                  onPress={() => handleStatusFilter(status)}
+                >
+                  <Text 
+                    style={[
+                      styles.dropdownText,
+                      statusFilter === status && styles.selectedDropdownText
+                    ]}
+                  >
+                    {status}
+                  </Text>
+                  {statusFilter === status && (
+                    <MaterialIcons name="check" size={16} color="#3C3169" />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
         </View>
         
         {/* Advanced Filters */}
@@ -401,49 +566,160 @@ export default function RoomsScreen() {
               <View style={styles.dateFilter}>
                 <Text style={styles.dateLabel}>Tarih Aralığı</Text>
                 <Text style={styles.smallLabel}>Başlangıç Tarihi</Text>
-                <View style={styles.dateInput}>
-                  <Text>24.03.2025</Text>
+                <TouchableOpacity 
+                  style={styles.dateInput}
+                  onPress={() => {
+                    // In a real app, show a date picker
+                    // For demo, we'll just set a hardcoded date
+                    handleDateChange('24.03.2025', 'start');
+                  }}
+                >
+                  <Text>{startDate || 'GG.AA.YYYY'}</Text>
                   <MaterialIcons name="calendar-today" size={16} color="#333" />
-                </View>
+                </TouchableOpacity>
               </View>
               
               <View style={styles.dateFilter}>
                 <Text style={styles.smallLabel}>Bitiş Tarihi</Text>
-                <View style={styles.dateInput}>
-                  <Text>GG.AA.YYYY</Text>
+                <TouchableOpacity 
+                  style={styles.dateInput}
+                  onPress={() => {
+                    // In a real app, show a date picker
+                    // For demo, we'll just set a hardcoded date
+                    handleDateChange('28.03.2025', 'end');
+                  }}
+                >
+                  <Text>{endDate || 'GG.AA.YYYY'}</Text>
                   <MaterialIcons name="calendar-today" size={16} color="#333" />
-                </View>
+                </TouchableOpacity>
               </View>
             </View>
             
             <View style={styles.featureFilter}>
               <Text style={styles.featureLabel}>Oda Özellikleri</Text>
-              <TouchableOpacity style={styles.featureDropdown}>
-                <Text>Özellikler</Text>
-                <MaterialIcons name="arrow-drop-down" size={24} color="#333" />
+              <TouchableOpacity 
+                style={styles.featureDropdown}
+                onPress={() => setShowFeaturesDropdown(!showFeaturesDropdown)}
+              >
+                <Text>
+                  {selectedFeatures.length > 0 
+                    ? `${selectedFeatures.length} özellik seçildi` 
+                    : 'Özellikler'}
+                </Text>
+                <MaterialIcons 
+                  name={showFeaturesDropdown ? "arrow-drop-up" : "arrow-drop-down"} 
+                  size={24} 
+                  color="#333" 
+                />
+              </TouchableOpacity>
+              
+              {showFeaturesDropdown && (
+                <View style={styles.featuresDropdownMenu}>
+                  {availableFeatures.map((feature) => (
+                    <TouchableOpacity 
+                      key={feature}
+                      style={styles.featureCheckItem}
+                      onPress={() => handleFeatureToggle(feature)}
+                    >
+                      <View style={styles.checkboxContainer}>
+                        <View style={[
+                          styles.checkbox,
+                          selectedFeatures.includes(feature) && styles.checkedBox
+                        ]}>
+                          {selectedFeatures.includes(feature) && (
+                            <MaterialIcons name="check" size={14} color="white" />
+                          )}
+                        </View>
+                        <Text style={styles.featureItemText}>{feature}</Text>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+            
+            <View style={styles.filterActions}>
+              <TouchableOpacity 
+                style={styles.clearFiltersButton}
+                onPress={clearAllFilters}
+              >
+                <Text style={styles.clearFiltersText}>FİLTRELERİ TEMİZLE</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.applyFiltersButton}
+                onPress={() => setShowFilters(false)}
+              >
+                <Text style={styles.applyFiltersText}>UYGULA</Text>
               </TouchableOpacity>
             </View>
           </View>
         )}
         
         {/* Active Filter Tags */}
-        <View style={styles.activeFilters}>
-          <View style={styles.filterTag}>
-            <Text style={styles.filterTagText}>24.03.2025</Text>
-            <TouchableOpacity>
-              <MaterialIcons name="close" size={16} color="#3C3169" />
+        {activeFilters.length > 0 && (
+          <View style={styles.activeFilters}>
+            {activeFilters.map((filter, index) => {
+              let displayText = '';
+              
+              if (filter.type === 'status') {
+                displayText = filter.value;
+              } else if (filter.type === 'feature') {
+                displayText = filter.value;
+              } else if (filter.type === 'startDate') {
+                displayText = `Başlangıç: ${filter.value}`;
+              } else if (filter.type === 'endDate') {
+                displayText = `Bitiş: ${filter.value}`;
+              }
+              
+              return (
+                <View key={index} style={styles.filterTag}>
+                  <Text style={styles.filterTagText}>{displayText}</Text>
+                  <TouchableOpacity onPress={() => removeFilter(filter)}>
+                    <MaterialIcons name="close" size={16} color="#3C3169" />
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+            
+            {activeFilters.length > 1 && (
+              <TouchableOpacity 
+                style={styles.clearAllTag}
+                onPress={clearAllFilters}
+              >
+                <Text style={styles.clearAllText}>Tümünü Temizle</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+        
+        {/* Empty state when no rooms match the filters */}
+        {filteredRooms.length === 0 && (
+          <View style={styles.emptyState}>
+            <MaterialIcons name="search-off" size={48} color="#999" />
+            <Text style={styles.emptyStateTitle}>Sonuç Bulunamadı</Text>
+            <Text style={styles.emptyStateText}>
+              Arama kriterlerinize uygun oda bulunamadı. Lütfen filtreleri değiştirin.
+            </Text>
+            <TouchableOpacity 
+              style={styles.resetButton}
+              onPress={clearAllFilters}
+            >
+              <Text style={styles.resetButtonText}>FİLTRELERİ SIFIRLA</Text>
             </TouchableOpacity>
           </View>
-        </View>
+        )}
         
         {/* Room List */}
-        <FlatList
-          data={rooms}
-          renderItem={renderRoomCard}
-          keyExtractor={item => item.id}
-          contentContainerStyle={styles.roomList}
-          numColumns={1}
-        />
+        {filteredRooms.length > 0 && (
+          <FlatList
+            data={filteredRooms}
+            renderItem={renderRoomCard}
+            keyExtractor={item => item.id}
+            contentContainerStyle={styles.roomList}
+            numColumns={1}
+          />
+        )}
         
         {/* Room Details Modal */}
         {renderRoomDetails()}
@@ -878,5 +1154,147 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  dropdownMenu: {
+    backgroundColor: 'white',
+    borderRadius: 5,
+    padding: 5,
+    marginTop: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+    zIndex: 10,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  selectedDropdownItem: {
+    backgroundColor: '#E8E4F3',
+  },
+  dropdownText: {
+    color: '#333',
+  },
+  selectedDropdownText: {
+    fontWeight: 'bold',
+    color: '#3C3169',
+  },
+  featuresDropdownMenu: {
+    marginTop: 10,
+    backgroundColor: 'white',
+    borderRadius: 5,
+    padding: 5,
+    maxHeight: 200,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  featureCheckItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    marginRight: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkedBox: {
+    backgroundColor: '#3C3169',
+    borderColor: '#3C3169',
+  },
+  featureItemText: {
+    color: '#333',
+  },
+  filterActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  clearFiltersButton: {
+    backgroundColor: '#f0f0f0',
+    padding: 10,
+    borderRadius: 5,
+    flex: 1,
+    marginRight: 10,
+    alignItems: 'center',
+  },
+  clearFiltersText: {
+    color: '#E53935',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  applyFiltersButton: {
+    backgroundColor: '#3C3169',
+    padding: 10,
+    borderRadius: 5,
+    flex: 1,
+    alignItems: 'center',
+  },
+  applyFiltersText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  emptyState: {
+    padding: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 50,
+  },
+  emptyStateTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginTop: 15,
+    marginBottom: 10,
+    color: '#333',
+    textAlign: 'center',
+  },
+  emptyStateText: {
+    color: '#666',
+    marginBottom: 20,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  resetButton: {
+    backgroundColor: '#3C3169',
+    padding: 10,
+    borderRadius: 5,
+    paddingHorizontal: 20,
+  },
+  resetButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  clearAllTag: {
+    backgroundColor: '#F5F5F5',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 15,
+    marginLeft: 5,
+  },
+  clearAllText: {
+    color: '#E53935',
+    fontSize: 12,
+    fontWeight: '500',
   },
 }); 
