@@ -9,7 +9,8 @@ import {
   TouchableOpacity,
   FlatList,
   Modal,
-  Image
+  Image,
+  Alert
 } from 'react-native';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
@@ -39,6 +40,11 @@ export default function RoomsScreen() {
     start: new Date(2025, 3, 16), // April 16, 2025
     end: new Date(2025, 3, 30) // April 30, 2025
   });
+  const [reservationModalVisible, setReservationModalVisible] = useState(false);
+  const [reservationRoom, setReservationRoom] = useState(null);
+  const [reservationDates, setReservationDates] = useState({ start: '', end: '' });
+  const [guestName, setGuestName] = useState('');
+  const [showReservationDateModal, setShowReservationDateModal] = useState(false);
 
   // Sample room data with added imageUrl property
   const [rooms, setRooms] = useState([
@@ -340,8 +346,12 @@ export default function RoomsScreen() {
     
     if (calendarType === 'start') {
       handleDateChange(formattedDate, 'start');
-    } else {
+    } else if (calendarType === 'end') {
       handleDateChange(formattedDate, 'end');
+    } else if (calendarType === 'reservationStart') {
+      setReservationDates(prev => ({ ...prev, start: formattedDate }));
+    } else if (calendarType === 'reservationEnd') {
+      setReservationDates(prev => ({ ...prev, end: formattedDate }));
     }
     
     setShowCalendar(false);
@@ -519,6 +529,200 @@ export default function RoomsScreen() {
     );
   };
 
+  const handleReservation = (room) => {
+    // Check if date range is already selected
+    if (!startDate || !endDate) {
+      // If dates aren't selected, open the reservation date modal first
+      setReservationRoom(room);
+      setReservationDates({ start: '', end: '' });
+      setShowReservationDateModal(true);
+    } else {
+      // If dates are already selected, proceed directly to guest name
+      setReservationRoom(room);
+      setReservationDates({ start: startDate, end: endDate });
+      setGuestName('');
+      setReservationModalVisible(true);
+    }
+  };
+
+  const confirmReservation = () => {
+    if (!guestName.trim()) {
+      alert('Lütfen misafir adını girin.');
+      return;
+    }
+    
+    // Update the room's status to occupied with the reservation details
+    const updatedRooms = rooms.map(room => {
+      if (room.id === reservationRoom.id) {
+        return {
+          ...room,
+          status: 'occupied',
+          guest: guestName,
+          checkIn: reservationDates.start,
+          checkOut: reservationDates.end
+        };
+      }
+      return room;
+    });
+    
+    setRooms(updatedRooms);
+    setReservationModalVisible(false);
+    
+    // Clear date filters after reservation
+    setStartDate('');
+    setEndDate('');
+    setActiveFilters(activeFilters.filter(filter => 
+      filter.type !== 'startDate' && filter.type !== 'endDate'
+    ));
+    
+    // Show confirmation
+    alert(`Oda ${reservationRoom.id} başarıyla ${guestName} adına rezerve edildi.`);
+  };
+
+  const renderReservationModal = () => {
+    if (!reservationRoom) return null;
+    
+    return (
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={reservationModalVisible}
+        onRequestClose={() => setReservationModalVisible(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Rezervasyon: Oda {reservationRoom.id}</Text>
+              <TouchableOpacity onPress={() => setReservationModalVisible(false)}>
+                <MaterialIcons name="close" size={24} color="white" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.modalBody}>
+              <Text style={styles.sectionTitle}>Rezervasyon Bilgileri</Text>
+              
+              <View style={styles.reservationInfo}>
+                <Text style={styles.roomDetailText}>Giriş Tarihi: {reservationDates.start}</Text>
+                <Text style={styles.roomDetailText}>Çıkış Tarihi: {reservationDates.end}</Text>
+              </View>
+              
+              <View style={styles.guestInputContainer}>
+                <Text style={styles.inputLabel}>Misafir Adı:</Text>
+                <TextInput
+                  style={styles.guestInput}
+                  placeholder="Misafir adını girin"
+                  value={guestName}
+                  onChangeText={setGuestName}
+                />
+              </View>
+              
+              <View style={styles.modalActions}>
+                <TouchableOpacity 
+                  style={styles.cancelReservationButton}
+                  onPress={() => setReservationModalVisible(false)}
+                >
+                  <Text style={styles.cancelText}>İPTAL</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.confirmReservationButton}
+                  onPress={confirmReservation}
+                >
+                  <Text style={styles.confirmText}>REZERVASYONU ONAYLA</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  const renderReservationDateModal = () => {
+    if (!reservationRoom) return null;
+    
+    return (
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showReservationDateModal}
+        onRequestClose={() => setShowReservationDateModal(false)}
+      >
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Rezervasyon Tarihleri: Oda {reservationRoom.id}</Text>
+              <TouchableOpacity onPress={() => setShowReservationDateModal(false)}>
+                <MaterialIcons name="close" size={24} color="white" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.modalBody}>
+              <Text style={styles.sectionTitle}>Rezervasyon Tarihi Seçin</Text>
+              
+              <View style={styles.dateFilterRow}>
+                <View style={[styles.dateFilter, { width: '48%' }]}>
+                  <Text style={styles.smallLabel}>Giriş Tarihi</Text>
+                  <TouchableOpacity 
+                    style={styles.dateInput}
+                    onPress={() => {
+                      setCalendarType('reservationStart');
+                      setShowCalendar(true);
+                    }}
+                  >
+                    <Text>{reservationDates.start || 'GG.AA.YYYY'}</Text>
+                    <MaterialIcons name="calendar-today" size={16} color="#333" />
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={[styles.dateFilter, { width: '48%' }]}>
+                  <Text style={styles.smallLabel}>Çıkış Tarihi</Text>
+                  <TouchableOpacity 
+                    style={styles.dateInput}
+                    onPress={() => {
+                      setCalendarType('reservationEnd');
+                      setShowCalendar(true);
+                    }}
+                  >
+                    <Text>{reservationDates.end || 'GG.AA.YYYY'}</Text>
+                    <MaterialIcons name="calendar-today" size={16} color="#333" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+              
+              <View style={styles.modalActions}>
+                <TouchableOpacity 
+                  style={styles.cancelReservationButton}
+                  onPress={() => setShowReservationDateModal(false)}
+                >
+                  <Text style={styles.cancelText}>İPTAL</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.confirmReservationButton}
+                  onPress={handleReservationDateSelect}
+                >
+                  <Text style={styles.confirmText}>DEVAM ET</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  const handleReservationDateSelect = () => {
+    if (!reservationDates.start || !reservationDates.end) {
+      alert('Lütfen hem giriş hem de çıkış tarihini seçin.');
+      return;
+    }
+    
+    setShowReservationDateModal(false);
+    setGuestName('');
+    setReservationModalVisible(true);
+  };
+
   const renderRoomCard = ({ item }) => (
     <View style={styles.roomCard}>
       <View style={[styles.roomHeader, { backgroundColor: getStatusColor(item.status) }]}>
@@ -570,7 +774,10 @@ export default function RoomsScreen() {
         </TouchableOpacity>
         
         {item.status === 'available' && (
-          <TouchableOpacity style={styles.reserveButton}>
+          <TouchableOpacity 
+            style={styles.reserveButton}
+            onPress={() => handleReservation(item)}
+          >
             <MaterialIcons name="date-range" size={16} color="white" />
             <Text style={styles.reserveText}>REZERVE ET</Text>
           </TouchableOpacity>
@@ -624,7 +831,10 @@ export default function RoomsScreen() {
                   <Text style={styles.roomDetailText}>Giriş Tarihi: {selectedRoom.checkIn}</Text>
                   <Text style={styles.roomDetailText}>Çıkış Tarihi: {selectedRoom.checkOut}</Text>
                   
-                  <TouchableOpacity style={styles.cancelButton}>
+                  <TouchableOpacity 
+                    style={styles.cancelButton}
+                    onPress={() => handleCancelReservation(selectedRoom)}
+                  >
                     <MaterialIcons name="cancel" size={16} color="#E53935" />
                     <Text style={styles.cancelText}>REZERVASYONU İPTAL ET</Text>
                   </TouchableOpacity>
@@ -661,6 +871,48 @@ export default function RoomsScreen() {
           </View>
         </View>
       </Modal>
+    );
+  };
+
+  // Function to handle reservation cancellation
+  const handleCancelReservation = (room) => {
+    // Show confirmation dialog using React Native's Alert
+    Alert.alert(
+      "Rezervasyon İptali",
+      `${room.guest} adına yapılan rezervasyonu iptal etmek istediğinizden emin misiniz?`,
+      [
+        {
+          text: "İptal",
+          style: "cancel"
+        },
+        {
+          text: "Evet, İptal Et",
+          onPress: () => {
+            // Update the room status back to available
+            const updatedRooms = rooms.map(r => {
+              if (r.id === room.id) {
+                return {
+                  ...r,
+                  status: 'available',
+                  guest: undefined,
+                  checkIn: undefined,
+                  checkOut: undefined
+                };
+              }
+              return r;
+            });
+            
+            setRooms(updatedRooms);
+            setModalVisible(false);
+            
+            // Show success message
+            Alert.alert(
+              "Rezervasyon İptal Edildi",
+              `Oda ${room.id} rezervasyonu başarıyla iptal edildi.`
+            );
+          }
+        }
+      ]
     );
   };
 
@@ -1160,6 +1412,12 @@ export default function RoomsScreen() {
         
         {/* Calendar Modal */}
         {renderCalendar()}
+        
+        {/* Reservation Modal */}
+        {renderReservationModal()}
+        
+        {/* Reservation Date Modal */}
+        {renderReservationDateModal()}
       </View>
     </SafeAreaView>
   );
@@ -1968,5 +2226,60 @@ const styles = StyleSheet.create({
   legendText: {
     fontSize: 12,
     color: '#333',
+  },
+  guestInputContainer: {
+    marginVertical: 15,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 5,
+    color: '#333',
+  },
+  guestInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    fontSize: 14,
+  },
+  reservationInfo: {
+    backgroundColor: '#f9f9f9',
+    padding: 10,
+    borderRadius: 5,
+    marginTop: 5,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+  },
+  cancelReservationButton: {
+    backgroundColor: '#f0f0f0',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 5,
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 10,
+  },
+  cancelText: {
+    color: '#E53935',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  confirmReservationButton: {
+    backgroundColor: '#3C3169',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 5,
+    alignItems: 'center',
+    flex: 2,
+  },
+  confirmText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
   },
 }); 
