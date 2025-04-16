@@ -35,6 +35,10 @@ export default function RoomsScreen() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarType, setCalendarType] = useState(''); // 'start' or 'end'
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [calendarViewRange, setCalendarViewRange] = useState({
+    start: new Date(2025, 3, 16), // April 16, 2025
+    end: new Date(2025, 3, 30) // April 30, 2025
+  });
 
   // Sample room data with added imageUrl property
   const [rooms, setRooms] = useState([
@@ -52,8 +56,8 @@ export default function RoomsScreen() {
       capacity: '2 Kişilik',
       amenities: ['TV', 'Minibar', 'Wi-Fi'],
       guest: 'Ayşe Yılmaz',
-      checkIn: '20.03.2025',
-      checkOut: '25.03.2025',
+      checkIn: '15.04.2025',
+      checkOut: '25.04.2025',
       imageUrl: ''
     },
     {
@@ -62,7 +66,7 @@ export default function RoomsScreen() {
       capacity: '2 Kişilik',
       amenities: ['TV', 'Minibar', 'Wi-Fi'],
       maintenance: 'Klima arızası',
-      expectedCompletion: '26.03.2025',
+      expectedCompletion: '22.04.2025',
       imageUrl: ''
     },
     {
@@ -71,8 +75,8 @@ export default function RoomsScreen() {
       capacity: '4 Kişilik',
       amenities: ['TV', 'Minibar', 'Wi-Fi'],
       guest: 'Ali Kaya',
-      checkIn: '22.03.2025',
-      checkOut: '28.03.2025',
+      checkIn: '16.04.2025',
+      checkOut: '28.04.2025',
       imageUrl: ''
     },
     {
@@ -97,8 +101,8 @@ export default function RoomsScreen() {
       capacity: '2 Kişilik',
       amenities: ['TV', 'Minibar', 'Wi-Fi'],
       guest: 'Zeynep Demir',
-      checkIn: '21.03.2025',
-      checkOut: '26.03.2025',
+      checkIn: '18.04.2025',
+      checkOut: '26.04.2025',
       imageUrl: ''
     },
     {
@@ -660,6 +664,210 @@ export default function RoomsScreen() {
     );
   };
 
+  // Function to generate dates for the calendar view
+  const generateCalendarDates = () => {
+    const dates = [];
+    const start = new Date(calendarViewRange.start);
+    const end = new Date(calendarViewRange.end);
+    
+    while (start <= end) {
+      dates.push(new Date(start));
+      start.setDate(start.getDate() + 1);
+    }
+    
+    return dates;
+  };
+
+  // Helper function to format date as "DD/MM EEE" (e.g., "24/03 Pzt")
+  const formatDateHeader = (date) => {
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    
+    const dayNames = ['Pzr', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+    const dayOfWeek = dayNames[date.getDay()];
+    
+    return `${day}/${month} ${dayOfWeek}`;
+  };
+
+  // Function to parse date from DD.MM.YYYY format
+  const parseDate = (dateStr) => {
+    if (!dateStr) return null;
+    const [day, month, year] = dateStr.split('.').map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  // Debug logging for initial status calculation
+  useEffect(() => {
+    const today = new Date(2025, 3, 16); // April 16, 2025
+    console.log("Testing room status calculation...");
+    rooms.forEach(room => {
+      console.log(`Room ${room.id} (${room.status}) on ${today.toDateString()}: ${getRoomStatusForDate(room, today)}`);
+      if (room.checkIn) {
+        console.log(`  Check-in: ${room.checkIn}, Check-out: ${room.checkOut}`);
+      }
+      if (room.expectedCompletion) {
+        console.log(`  Expected completion: ${room.expectedCompletion}`);
+      }
+    });
+  }, []);
+
+  // Simplified and direct room status calculation
+  const getRoomStatusForDate = (room, date) => {
+    // Format date for consistent comparison
+    const formatDate = (d) => {
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+    
+    const dateStr = formatDate(date);
+    
+    if (room.status === 'occupied') {
+      const checkIn = parseDate(room.checkIn);
+      const checkOut = parseDate(room.checkOut);
+      
+      if (checkIn && checkOut) {
+        const checkInStr = formatDate(checkIn);
+        const checkOutStr = formatDate(checkOut);
+        
+        if (dateStr >= checkInStr && dateStr <= checkOutStr) {
+          return 'occupied';
+        }
+      }
+    } 
+    else if (room.status === 'maintenance') {
+      const completion = parseDate(room.expectedCompletion);
+      
+      if (completion) {
+        const completionStr = formatDate(completion);
+        
+        if (dateStr <= completionStr) {
+          return 'maintenance';
+        }
+      }
+    }
+    
+    // Default to available if not occupied or under maintenance for this date
+    return 'available';
+  };
+
+  // Function to handle changing the calendar view date range
+  const changeCalendarViewRange = (increment) => {
+    const newStart = new Date(calendarViewRange.start);
+    const newEnd = new Date(calendarViewRange.end);
+    
+    newStart.setDate(newStart.getDate() + (increment * 14));
+    newEnd.setDate(newEnd.getDate() + (increment * 14));
+    
+    setCalendarViewRange({
+      start: newStart,
+      end: newEnd
+    });
+  };
+
+  // Function to format the date range display
+  const formatDateRangeDisplay = () => {
+    const formatDate = (date) => {
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}.${month}.${year}`;
+    };
+    
+    return `${formatDate(calendarViewRange.start)} - ${formatDate(calendarViewRange.end)}`;
+  };
+
+  // Modify the renderCalendarView function to modify the calendar rendering
+  const renderCalendarView = () => {
+    const dates = generateCalendarDates();
+    const filteredRoomsByNumber = [...filteredRooms].sort((a, b) => parseInt(a.id) - parseInt(b.id));
+    
+    return (
+      <View style={styles.calendarViewContainer}>
+        <View style={styles.calendarViewHeader}>
+          <TouchableOpacity onPress={() => changeCalendarViewRange(-1)}>
+            <MaterialIcons name="chevron-left" size={24} color="#3C3169" />
+          </TouchableOpacity>
+          
+          <Text style={styles.dateRangeText}>{formatDateRangeDisplay()}</Text>
+          
+          <TouchableOpacity onPress={() => changeCalendarViewRange(1)}>
+            <MaterialIcons name="chevron-right" size={24} color="#3C3169" />
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.todayButton}
+            onPress={() => {
+              const today = new Date();
+              setCalendarViewRange({
+                start: today,
+                end: new Date(new Date().setDate(today.getDate() + 14))
+              });
+            }}
+          >
+            <Text style={styles.todayButtonText}>BUGÜN</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+          <View>
+            {/* Column Headers (Dates) */}
+            <View style={styles.calendarHeaderRow}>
+              <View style={styles.roomNumberCell}>
+                <Text style={styles.roomNumberHeaderText}>Oda / Tarih</Text>
+              </View>
+              {dates.map((date, index) => (
+                <View key={index} style={styles.dateHeaderCell}>
+                  <Text style={styles.dateHeaderText}>{formatDateHeader(date)}</Text>
+                </View>
+              ))}
+            </View>
+            
+            {/* Room Rows */}
+            <ScrollView style={{ maxHeight: 550 }}>
+              {filteredRoomsByNumber.map((room) => (
+                <View key={room.id} style={styles.roomRow}>
+                  <View style={styles.roomNumberCell}>
+                    <Text style={styles.roomNumberText}>{room.id}</Text>
+                  </View>
+                  
+                  {dates.map((date, dateIndex) => {
+                    // Get the status for this room on this specific date
+                    const status = getRoomStatusForDate(room, date);
+                    
+                    return (
+                      <TouchableOpacity 
+                        key={dateIndex} 
+                        style={[
+                          styles.roomStatusCell,
+                          { backgroundColor: getStatusColor(status) }
+                        ]}
+                        onPress={() => showRoomDetails(room)}
+                      />
+                    );
+                  })}
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        </ScrollView>
+
+        <View style={styles.calendarLegend}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColor, { backgroundColor: getStatusColor('available') }]} />
+            <Text style={styles.legendText}>Müsait</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColor, { backgroundColor: getStatusColor('occupied') }]} />
+            <Text style={styles.legendText}>Dolu</Text>
+          </View>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendColor, { backgroundColor: getStatusColor('maintenance') }]} />
+            <Text style={styles.legendText}>Bakımda</Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
@@ -731,63 +939,65 @@ export default function RoomsScreen() {
         </View>
         
         {/* Search and Filters */}
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Oda Numarası Ara"
-            value={searchText}
-            onChangeText={setSearchText}
-          />
-          
-          <View style={styles.filterRow}>
-            <TouchableOpacity 
-              style={styles.statusFilter}
-              onPress={() => setShowStatusDropdown(!showStatusDropdown)}
-            >
-              <Text style={styles.filterText}>{statusFilter}</Text>
-              <MaterialIcons name="arrow-drop-down" size={24} color="#333" />
-            </TouchableOpacity>
+        {activeView === 'card' && (
+          <View style={styles.searchContainer}>
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Oda Numarası Ara"
+              value={searchText}
+              onChangeText={setSearchText}
+            />
             
-            <TouchableOpacity 
-              style={styles.advancedFilter}
-              onPress={() => setShowFilters(!showFilters)}
-            >
-              <MaterialIcons name="filter-list" size={20} color="#3C3169" />
-              <Text style={styles.advancedFilterText}>GELİŞMİŞ FİLTRELER</Text>
-            </TouchableOpacity>
-          </View>
-          
-          {/* Status Dropdown */}
-          {showStatusDropdown && (
-            <View style={styles.dropdownMenu}>
-              {['Tümü', 'Müsait', 'Dolu', 'Bakımda'].map((status) => (
-                <TouchableOpacity 
-                  key={status} 
-                  style={[
-                    styles.dropdownItem,
-                    statusFilter === status && styles.selectedDropdownItem
-                  ]}
-                  onPress={() => handleStatusFilter(status)}
-                >
-                  <Text 
-                    style={[
-                      styles.dropdownText,
-                      statusFilter === status && styles.selectedDropdownText
-                    ]}
-                  >
-                    {status}
-                  </Text>
-                  {statusFilter === status && (
-                    <MaterialIcons name="check" size={16} color="#3C3169" />
-                  )}
-                </TouchableOpacity>
-              ))}
+            <View style={styles.filterRow}>
+              <TouchableOpacity 
+                style={styles.statusFilter}
+                onPress={() => setShowStatusDropdown(!showStatusDropdown)}
+              >
+                <Text style={styles.filterText}>{statusFilter}</Text>
+                <MaterialIcons name="arrow-drop-down" size={24} color="#333" />
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.advancedFilter}
+                onPress={() => setShowFilters(!showFilters)}
+              >
+                <MaterialIcons name="filter-list" size={20} color="#3C3169" />
+                <Text style={styles.advancedFilterText}>GELİŞMİŞ FİLTRELER</Text>
+              </TouchableOpacity>
             </View>
-          )}
-        </View>
+            
+            {/* Status Dropdown */}
+            {showStatusDropdown && (
+              <View style={styles.dropdownMenu}>
+                {['Tümü', 'Müsait', 'Dolu', 'Bakımda'].map((status) => (
+                  <TouchableOpacity 
+                    key={status} 
+                    style={[
+                      styles.dropdownItem,
+                      statusFilter === status && styles.selectedDropdownItem
+                    ]}
+                    onPress={() => handleStatusFilter(status)}
+                  >
+                    <Text 
+                      style={[
+                        styles.dropdownText,
+                        statusFilter === status && styles.selectedDropdownText
+                      ]}
+                    >
+                      {status}
+                    </Text>
+                    {statusFilter === status && (
+                      <MaterialIcons name="check" size={16} color="#3C3169" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        )}
         
         {/* Advanced Filters */}
-        {showFilters && (
+        {activeView === 'card' && showFilters && (
           <View style={styles.advancedFiltersContainer}>
             <Text style={styles.filterSectionTitle}>Gelişmiş Filtreler</Text>
             
@@ -878,7 +1088,7 @@ export default function RoomsScreen() {
         )}
         
         {/* Active Filter Tags */}
-        {activeFilters.length > 0 && (
+        {activeView === 'card' && activeFilters.length > 0 && (
           <View style={styles.activeFilters}>
             {activeFilters.map((filter, index) => {
               let displayText = '';
@@ -914,8 +1124,11 @@ export default function RoomsScreen() {
           </View>
         )}
         
+        {/* Calendar View */}
+        {activeView === 'calendar' && renderCalendarView()}
+        
         {/* Empty state when no rooms match the filters */}
-        {filteredRooms.length === 0 && (
+        {activeView === 'card' && filteredRooms.length === 0 && (
           <View style={styles.emptyState}>
             <MaterialIcons name="search-off" size={48} color="#999" />
             <Text style={styles.emptyStateTitle}>Sonuç Bulunamadı</Text>
@@ -932,7 +1145,7 @@ export default function RoomsScreen() {
         )}
         
         {/* Room List */}
-        {filteredRooms.length > 0 && (
+        {activeView === 'card' && filteredRooms.length > 0 && (
           <FlatList
             data={filteredRooms}
             renderItem={renderRoomCard}
@@ -1643,5 +1856,117 @@ const styles = StyleSheet.create({
   calendarButtonText: {
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  // Calendar view styles
+  calendarViewContainer: {
+    backgroundColor: 'white',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  calendarViewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    marginBottom: 10,
+  },
+  dateRangeText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  todayButton: {
+    backgroundColor: '#3C3169',
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 5,
+    marginLeft: 10,
+  },
+  todayButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  calendarHeaderRow: {
+    flexDirection: 'row',
+    backgroundColor: '#f5f5f5',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+  },
+  roomNumberCell: {
+    width: 80,
+    borderRightWidth: 1,
+    borderRightColor: '#ddd',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  roomNumberHeaderText: {
+    fontWeight: 'bold',
+    fontSize: 12,
+    color: '#333',
+    textAlign: 'center',
+  },
+  dateHeaderCell: {
+    width: 70,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  dateHeaderText: {
+    fontSize: 11,
+    color: '#333',
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  roomRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  roomNumberText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  roomStatusCell: {
+    width: 70,
+    height: 40,
+    borderWidth: 0.5,
+    borderColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  calendarLegend: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 15,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  legendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 10,
+  },
+  legendColor: {
+    width: 16,
+    height: 16,
+    borderRadius: 4,
+    marginRight: 5,
+  },
+  legendText: {
+    fontSize: 12,
+    color: '#333',
   },
 }); 
