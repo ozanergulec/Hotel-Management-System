@@ -1,0 +1,19 @@
+# .NET Gereksiz Dosyalar
+bin/
+obj/
+.vs/
+TestResults/
+
+# Node.js Gereksiz Dosyalar
+node_modules/
+
+# Expo (React Native) Gereksiz Dosyalar
+.expo/
+
+# IDE ve Editör Dosyaları
+.idea/
+*.suo
+*.user
+*.db
+*.log
+/Backend/CleanArchitecture/CleanArchitecture.Infrastructure/bin/
