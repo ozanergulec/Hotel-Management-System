@@ -110,22 +110,34 @@ export default function DashboardScreen() {
         {/* Quick Actions */}
         <Text style={styles.sectionTitle}>Hızlı Erişim</Text>
         <View style={styles.quickActions}>
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#4C3A89' }]}>
+          <TouchableOpacity 
+            style={[styles.actionButton, { backgroundColor: '#4C3A89' }]}
+            onPress={() => router.push('/rooms')}
+          >
             <MaterialIcons name="meeting-room" size={24} color="white" />
             <Text style={styles.actionButtonText}>ODA DURUMUNU GÖRÜNTÜLE</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#4CAF50' }]}>
+          <TouchableOpacity 
+            style={[styles.actionButton, { backgroundColor: '#4CAF50' }]}
+            onPress={() => router.push('/checkIn')}
+          >
             <MaterialIcons name="login" size={24} color="white" />
             <Text style={styles.actionButtonText}>YENİ GİRİŞ İŞLEMİ</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#3949AB' }]}>
+          <TouchableOpacity 
+            style={[styles.actionButton, { backgroundColor: '#3949AB' }]}
+            onPress={() => router.push('/checkOut')}
+          >
             <MaterialIcons name="logout" size={24} color="white" />
             <Text style={styles.actionButtonText}>YENİ ÇIKIŞ İŞLEMİ</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#1976D2' }]}>
+          <TouchableOpacity 
+            style={[styles.actionButton, { backgroundColor: '#1976D2' }]}
+            onPress={() => router.push('/customerInfo')}
+          >
             <MaterialIcons name="people" size={24} color="white" />
             <Text style={styles.actionButtonText}>MÜŞTERİ LİSTESİ</Text>
           </TouchableOpacity>
