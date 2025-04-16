@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,10 +8,13 @@ import {
   TextInput,
   TouchableOpacity,
   FlatList,
-  Modal
+  Modal,
+  Image
 } from 'react-native';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
+import { roomImages, getRandomRoomImage } from '../../assets/room-images';
+import Colors from '../../constants/Colors';
 
 export default function RoomsScreen() {
   const params = useLocalSearchParams();
@@ -24,14 +27,15 @@ export default function RoomsScreen() {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  // Sample room data based on the image
-  const rooms = [
+  // Sample room data with added imageUrl property
+  const [rooms, setRooms] = useState([
     {
       id: '101',
       status: 'available',
       capacity: '2 Kişilik',
       amenities: ['TV', 'Minibar', 'Wi-Fi'],
-      price: '₺'
+      price: '₺',
+      imageUrl: ''
     },
     {
       id: '102',
@@ -40,7 +44,8 @@ export default function RoomsScreen() {
       amenities: ['TV', 'Minibar', 'Wi-Fi'],
       guest: 'Ayşe Yılmaz',
       checkIn: '20.03.2025',
-      checkOut: '25.03.2025'
+      checkOut: '25.03.2025',
+      imageUrl: ''
     },
     {
       id: '103',
@@ -48,7 +53,8 @@ export default function RoomsScreen() {
       capacity: '2 Kişilik',
       amenities: ['TV', 'Minibar', 'Wi-Fi'],
       maintenance: 'Klima arızası',
-      expectedCompletion: '26.03.2025'
+      expectedCompletion: '26.03.2025',
+      imageUrl: ''
     },
     {
       id: '104',
@@ -57,21 +63,24 @@ export default function RoomsScreen() {
       amenities: ['TV', 'Minibar', 'Wi-Fi'],
       guest: 'Ali Kaya',
       checkIn: '22.03.2025',
-      checkOut: '28.03.2025'
+      checkOut: '28.03.2025',
+      imageUrl: ''
     },
     {
       id: '105',
       status: 'available',
       capacity: '2 Kişilik',
       amenities: ['TV', 'Minibar', 'Wi-Fi'],
-      price: '₺'
+      price: '₺',
+      imageUrl: ''
     },
     {
       id: '201',
       status: 'available',
       capacity: '2 Kişilik',
       amenities: ['TV', 'Minibar', 'Wi-Fi'],
-      price: '₺'
+      price: '₺',
+      imageUrl: ''
     },
     {
       id: '202',
@@ -80,16 +89,27 @@ export default function RoomsScreen() {
       amenities: ['TV', 'Minibar', 'Wi-Fi'],
       guest: 'Zeynep Demir',
       checkIn: '21.03.2025',
-      checkOut: '26.03.2025'
+      checkOut: '26.03.2025',
+      imageUrl: ''
     },
     {
       id: '203',
       status: 'available',
       capacity: '2 Kişilik',
       amenities: ['TV', 'Minibar', 'Wi-Fi'],
-      price: '₺'
+      price: '₺',
+      imageUrl: ''
     }
-  ];
+  ]);
+
+  // Assign random images to rooms on component mount
+  useEffect(() => {
+    const roomsWithImages = rooms.map(room => ({
+      ...room,
+      imageUrl: getRandomRoomImage()
+    }));
+    setRooms(roomsWithImages);
+  }, []);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -142,6 +162,13 @@ export default function RoomsScreen() {
         <Text style={styles.roomNumber}>{item.id}</Text>
         <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
       </View>
+      
+      {/* Room Image */}
+      <Image
+        source={{ uri: item.imageUrl }}
+        style={styles.roomImage}
+        resizeMode="cover"
+      />
       
       <View style={styles.roomContent}>
         <Text style={styles.roomInfo}>• {item.capacity}</Text>
@@ -207,10 +234,17 @@ export default function RoomsScreen() {
               </TouchableOpacity>
             </View>
             
+            {/* Room Image in Modal */}
+            <Image
+              source={{ uri: selectedRoom.imageUrl }}
+              style={styles.modalRoomImage}
+              resizeMode="cover"
+            />
+            
             <View style={styles.modalBody}>
               <View style={styles.roomInfoSection}>
                 <Text style={styles.sectionTitle}>Oda Bilgileri</Text>
-                <View style={styles.statusBadge}>
+                <View style={[styles.statusBadge, {backgroundColor: getStatusColor(selectedRoom.status)}]}>
                   <Text style={styles.statusBadgeText}>
                     {getStatusText(selectedRoom.status)}
                   </Text>
@@ -655,6 +689,17 @@ const styles = StyleSheet.create({
     color: 'white',
     marginLeft: 'auto',
   },
+  // New styles for room images
+  roomImage: {
+    width: '100%',
+    height: 150,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  modalRoomImage: {
+    width: '100%',
+    height: 200,
+  },
   roomContent: {
     padding: 10,
   },
@@ -735,7 +780,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '90%',
-    maxHeight: '80%',
+    maxHeight: '90%',
     backgroundColor: 'white',
     borderRadius: 10,
     overflow: 'hidden',
@@ -765,7 +810,6 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   statusBadge: {
-    backgroundColor: '#E53935',
     alignSelf: 'flex-start',
     paddingVertical: 3,
     paddingHorizontal: 10,
