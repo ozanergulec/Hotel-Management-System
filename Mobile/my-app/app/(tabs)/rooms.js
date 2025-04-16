@@ -32,6 +32,9 @@ export default function RoomsScreen() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [activeFilters, setActiveFilters] = useState([]);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarType, setCalendarType] = useState(''); // 'start' or 'end'
+  const [currentMonth, setCurrentMonth] = useState(new Date());
 
   // Sample room data with added imageUrl property
   const [rooms, setRooms] = useState([
@@ -148,7 +151,40 @@ export default function RoomsScreen() {
       }
     }
     
-    // Additional date filtering logic could be added here
+    // Filter by date range (only for occupied rooms)
+    if (startDate || endDate) {
+      // Convert dates to comparable format
+      const parseDate = (dateStr) => {
+        if (!dateStr) return null;
+        const [day, month, year] = dateStr.split('.').map(Number);
+        return new Date(year, month - 1, day);
+      };
+      
+      const start = parseDate(startDate);
+      const end = parseDate(endDate);
+      
+      if (room.status === 'occupied') {
+        const checkIn = parseDate(room.checkIn);
+        const checkOut = parseDate(room.checkOut);
+        
+        if (start && end) {
+          // Check if the room's occupied period overlaps with the filter period
+          if (!(checkIn <= end && checkOut >= start)) {
+            return false;
+          }
+        } else if (start && !end) {
+          // Only start date specified, check if checkout is after start
+          if (checkOut < start) {
+            return false;
+          }
+        } else if (!start && end) {
+          // Only end date specified, check if checkin is before end
+          if (checkIn > end) {
+            return false;
+          }
+        }
+      }
+    }
     
     return true;
   });
@@ -284,6 +320,199 @@ export default function RoomsScreen() {
       imageUrl: getRandomRoomImage()
     }));
     setRooms(refreshedRooms);
+  };
+
+  const openCalendar = (type) => {
+    setCalendarType(type);
+    setShowCalendar(true);
+  };
+
+  const handleDateSelect = (date) => {
+    // Format the date as DD.MM.YYYY
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    const formattedDate = `${day}.${month}.${year}`;
+    
+    if (calendarType === 'start') {
+      handleDateChange(formattedDate, 'start');
+    } else {
+      handleDateChange(formattedDate, 'end');
+    }
+    
+    setShowCalendar(false);
+  };
+
+  const getDaysInMonth = (date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const days = new Date(year, month + 1, 0).getDate();
+    
+    const firstDayOfMonth = new Date(year, month, 1).getDay();
+    const daysArray = [];
+    
+    // Add empty spaces for days before the first day of month
+    for (let i = 0; i < firstDayOfMonth; i++) {
+      daysArray.push({ day: '', date: null });
+    }
+    
+    // Add all days of the month
+    for (let i = 1; i <= days; i++) {
+      daysArray.push({ 
+        day: i, 
+        date: new Date(year, month, i)
+      });
+    }
+    
+    return daysArray;
+  };
+
+  const changeMonth = (increment) => {
+    const newMonth = new Date(currentMonth);
+    newMonth.setMonth(newMonth.getMonth() + increment);
+    setCurrentMonth(newMonth);
+  };
+
+  const renderCalendar = () => {
+    if (!showCalendar) return null;
+    
+    const daysOfWeek = ['Pzr', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+    const monthDays = getDaysInMonth(currentMonth);
+    const month = currentMonth.toLocaleString('tr-TR', { month: 'long' });
+    const year = currentMonth.getFullYear();
+    
+    // Parse currently selected date (if any)
+    const parseSelectedDate = (dateStr) => {
+      if (!dateStr) return null;
+      const [day, month, year] = dateStr.split('.').map(Number);
+      return new Date(year, month - 1, day);
+    };
+    
+    const selectedDate = calendarType === 'start' 
+      ? parseSelectedDate(startDate) 
+      : parseSelectedDate(endDate);
+    
+    // Check if a date is today
+    const isToday = (date) => {
+      if (!date) return false;
+      const today = new Date();
+      return date.getDate() === today.getDate() && 
+             date.getMonth() === today.getMonth() && 
+             date.getFullYear() === today.getFullYear();
+    };
+    
+    // Check if a date is the selected date
+    const isSelectedDate = (date) => {
+      if (!date || !selectedDate) return false;
+      return date.getDate() === selectedDate.getDate() && 
+             date.getMonth() === selectedDate.getMonth() && 
+             date.getFullYear() === selectedDate.getFullYear();
+    };
+    
+    return (
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={showCalendar}
+        onRequestClose={() => setShowCalendar(false)}
+      >
+        <View style={styles.calendarModalContainer}>
+          <View style={styles.calendarContainer}>
+            <View style={styles.calendarHeader}>
+              <Text style={styles.calendarTitle}>
+                {calendarType === 'start' ? 'Başlangıç Tarihi' : 'Bitiş Tarihi'}
+              </Text>
+              <TouchableOpacity 
+                style={styles.closeCalendarButton}
+                onPress={() => setShowCalendar(false)}
+              >
+                <MaterialIcons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.monthSelector}>
+              <TouchableOpacity onPress={() => changeMonth(-1)}>
+                <MaterialIcons name="chevron-left" size={24} color="#3C3169" />
+              </TouchableOpacity>
+              <Text style={styles.monthYearText}>{`${month} ${year}`}</Text>
+              <TouchableOpacity onPress={() => changeMonth(1)}>
+                <MaterialIcons name="chevron-right" size={24} color="#3C3169" />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.daysOfWeek}>
+              {daysOfWeek.map(day => (
+                <Text key={day} style={styles.dayOfWeekText}>{day}</Text>
+              ))}
+            </View>
+            
+            <View style={styles.daysGrid}>
+              {monthDays.map((item, index) => {
+                const isSelected = item.date && isSelectedDate(item.date);
+                const isTodayDate = item.date && isToday(item.date);
+                
+                return (
+                  <TouchableOpacity 
+                    key={index}
+                    style={[
+                      styles.dayCell,
+                      item.day ? styles.validDay : styles.emptyDay,
+                      isSelected && styles.selectedDay,
+                      isTodayDate && styles.todayDay
+                    ]}
+                    disabled={!item.day}
+                    onPress={() => item.day ? handleDateSelect(item.date) : null}
+                  >
+                    <Text 
+                      style={[
+                        styles.dayText,
+                        item.day ? styles.validDayText : styles.emptyDayText,
+                        isSelected && styles.selectedDayText,
+                        isTodayDate && styles.todayDayText
+                      ]}
+                    >
+                      {item.day}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            
+            <View style={styles.calendarActions}>
+              <TouchableOpacity 
+                style={[styles.calendarButton, { backgroundColor: '#f0f0f0' }]}
+                onPress={() => setShowCalendar(false)}
+              >
+                <Text style={[styles.calendarButtonText, { color: '#666' }]}>İPTAL</Text>
+              </TouchableOpacity>
+              
+              {(calendarType === 'start' ? startDate : endDate) && (
+                <TouchableOpacity 
+                  style={[styles.calendarButton, { backgroundColor: '#FEE8E7' }]}
+                  onPress={() => {
+                    if (calendarType === 'start') {
+                      handleDateChange('', 'start');
+                    } else {
+                      handleDateChange('', 'end');
+                    }
+                    setShowCalendar(false);
+                  }}
+                >
+                  <Text style={[styles.calendarButtonText, { color: '#E53935' }]}>TEMİZLE</Text>
+                </TouchableOpacity>
+              )}
+              
+              <TouchableOpacity 
+                style={[styles.calendarButton, { backgroundColor: '#3C3169', flex: 1 }]}
+                onPress={() => setShowCalendar(false)}
+              >
+                <Text style={[styles.calendarButtonText, { color: 'white' }]}>TAMAM</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
   };
 
   const renderRoomCard = ({ item }) => (
@@ -568,11 +797,7 @@ export default function RoomsScreen() {
                 <Text style={styles.smallLabel}>Başlangıç Tarihi</Text>
                 <TouchableOpacity 
                   style={styles.dateInput}
-                  onPress={() => {
-                    // In a real app, show a date picker
-                    // For demo, we'll just set a hardcoded date
-                    handleDateChange('24.03.2025', 'start');
-                  }}
+                  onPress={() => openCalendar('start')}
                 >
                   <Text>{startDate || 'GG.AA.YYYY'}</Text>
                   <MaterialIcons name="calendar-today" size={16} color="#333" />
@@ -583,11 +808,7 @@ export default function RoomsScreen() {
                 <Text style={styles.smallLabel}>Bitiş Tarihi</Text>
                 <TouchableOpacity 
                   style={styles.dateInput}
-                  onPress={() => {
-                    // In a real app, show a date picker
-                    // For demo, we'll just set a hardcoded date
-                    handleDateChange('28.03.2025', 'end');
-                  }}
+                  onPress={() => openCalendar('end')}
                 >
                   <Text>{endDate || 'GG.AA.YYYY'}</Text>
                   <MaterialIcons name="calendar-today" size={16} color="#333" />
@@ -723,6 +944,9 @@ export default function RoomsScreen() {
         
         {/* Room Details Modal */}
         {renderRoomDetails()}
+        
+        {/* Calendar Modal */}
+        {renderCalendar()}
       </View>
     </SafeAreaView>
   );
@@ -1296,5 +1520,128 @@ const styles = StyleSheet.create({
     color: '#E53935',
     fontSize: 12,
     fontWeight: '500',
+  },
+  calendarModalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  calendarContainer: {
+    width: '85%',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    padding: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    paddingBottom: 10,
+  },
+  calendarTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  closeCalendarButton: {
+    padding: 5,
+  },
+  monthSelector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+    paddingHorizontal: 10,
+  },
+  monthYearText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#3C3169',
+  },
+  daysOfWeek: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    paddingBottom: 10,
+    marginBottom: 5,
+  },
+  dayOfWeekText: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#666',
+  },
+  daysGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 10,
+  },
+  dayCell: {
+    width: '14.28%',
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 2,
+  },
+  validDay: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 20,
+  },
+  emptyDay: {
+    backgroundColor: 'transparent',
+  },
+  dayText: {
+    fontSize: 14,
+  },
+  validDayText: {
+    color: '#333',
+  },
+  emptyDayText: {
+    color: 'transparent',
+  },
+  selectedDay: {
+    backgroundColor: '#3C3169',
+    borderRadius: 20,
+  },
+  todayDay: {
+    backgroundColor: '#E8E4F3',
+    borderRadius: 20,
+  },
+  selectedDayText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  todayDayText: {
+    color: '#3C3169',
+    fontWeight: '600',
+  },
+  calendarActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingTop: 15,
+  },
+  calendarButton: {
+    padding: 10,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginHorizontal: 5,
+  },
+  calendarButtonText: {
+    fontSize: 14,
+    fontWeight: 'bold',
   },
 }); 
