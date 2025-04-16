@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform } from 'react-native';
-import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
@@ -55,6 +55,13 @@ export default function TabLayout() {
         options={{
           title: 'Odalar',
           tabBarIcon: ({ color, size }) => <MaterialIcons name="hotel" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="other"
+        options={{
+          title: 'Diğer',
+          tabBarIcon: ({ color, size }) => <MaterialIcons name="more-horiz" size={size} color={color} />,
         }}
       />
     </Tabs>
