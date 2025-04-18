@@ -1,25 +1,35 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, StatusBar, Alert } from 'react-native';
-import { Ionicons, MaterialIcons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useAuth } from '@/context/AuthContext';
 
 export default function DashboardScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
-  const username = params.username || "Utku Adanur"; // Default if not provided
+  const { user, logout } = useAuth();
   
-  const handleLogout = () => {
+  // Use the email from the context or params as a fallback
+  const userEmail = user?.email || params.email || "user@example.com";
+  
+  const handleLogout = async () => {
+    // Show confirmation dialog
     Alert.alert(
-      "Çıkış Yap",
-      "Oturumu kapatmak istediğinize emin misiniz?",
+      "Logout",
+      "Are you sure you want to log out?",
       [
         {
-          text: "İptal",
+          text: "Cancel",
           style: "cancel"
         },
         { 
-          text: "Çıkış Yap", 
-          onPress: () => router.replace('/') 
+          text: "Logout", 
+          onPress: async () => {
+            console.log('Logging out...');
+            await logout();
+            console.log('Logged out, redirecting to login screen...');
+            router.replace('/');
+          }
         }
       ]
     );
@@ -29,26 +39,25 @@ export default function DashboardScreen() {
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
       
-      {/* Header */}
+      {/* Custom Header with Logout */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Main Page</Text>
-        <View style={styles.headerRight}>
-          <TouchableOpacity style={styles.profileButton}>
-            <Ionicons name="person-circle-outline" size={28} color="white" />
-          </TouchableOpacity>
-          <Text style={styles.username}>{username}</Text>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-            <MaterialIcons name="logout" size={24} color="white" />
-          </TouchableOpacity>
-        </View>
+        <Text style={styles.headerTitle}>Hotel Management System</Text>
+        <TouchableOpacity 
+          style={styles.logoutButton} 
+          onPress={handleLogout}
+        >
+          <MaterialIcons name="logout" size={24} color="#fff" />
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
       </View>
       
       <ScrollView style={styles.content}>
         {/* Greeting */}
-        <Text style={styles.greeting}>Hoş Geldiniz, Otel Yönetim Sistemine</Text>
+        <Text style={styles.greeting}>Welcome to Hotel Management System</Text>
+        <Text style={styles.userInfo}>Logged in as: {userEmail}</Text>
         
         {/* Daily Summary */}
-        <Text style={styles.sectionTitle}>Bugünün Özeti</Text>
+        <Text style={styles.sectionTitle}>Today's Summary</Text>
         
         {/* Stats Cards */}
         <View style={styles.statsContainer}>
@@ -56,14 +65,14 @@ export default function DashboardScreen() {
           <View style={styles.statCard}>
             <View style={styles.statHeader}>
               <MaterialIcons name="hotel" size={24} color="#4C3A89" />
-              <Text style={styles.statTitle}>Odalar</Text>
+              <Text style={styles.statTitle}>Rooms</Text>
             </View>
             <Text style={styles.statValue}>45/120</Text>
-            <Text style={styles.statSubtitle}>Müsait oda sayısı</Text>
+            <Text style={styles.statSubtitle}>Available rooms</Text>
             <View style={styles.statDetails}>
-              <Text style={styles.statDetailText}>45 müsait</Text>
-              <Text style={styles.statDetailText}>68 dolu</Text>
-              <Text style={styles.statDetailText}>7 bakımda</Text>
+              <Text style={styles.statDetailText}>45 available</Text>
+              <Text style={styles.statDetailText}>68 occupied</Text>
+              <Text style={styles.statDetailText}>7 maintenance</Text>
             </View>
           </View>
           
@@ -71,16 +80,16 @@ export default function DashboardScreen() {
           <View style={styles.statCard}>
             <View style={styles.statHeader}>
               <MaterialIcons name="swap-horiz" size={24} color="#4CAF50" />
-              <Text style={styles.statTitle}>Giriş/Çıkış</Text>
+              <Text style={styles.statTitle}>Check In/Out</Text>
             </View>
             <View style={styles.statDoubleValue}>
               <View style={styles.statDoubleItem}>
                 <Text style={styles.statValue}>15</Text>
-                <Text style={styles.statSubtitle}>Bugünkü giriş</Text>
+                <Text style={styles.statSubtitle}>Today's check-ins</Text>
               </View>
               <View style={styles.statDoubleItem}>
                 <Text style={styles.statValue}>12</Text>
-                <Text style={styles.statSubtitle}>Bugünkü çıkış</Text>
+                <Text style={styles.statSubtitle}>Today's check-outs</Text>
               </View>
             </View>
           </View>
@@ -88,34 +97,34 @@ export default function DashboardScreen() {
           {/* Revenue Card */}
           <View style={styles.statCard}>
             <View style={styles.statHeader}>
-              <FontAwesome5 name="lira-sign" size={20} color="#2E7D32" />
-              <Text style={styles.statTitle}>Gelir</Text>
+              <FontAwesome5 name="dollar-sign" size={20} color="#2E7D32" />
+              <Text style={styles.statTitle}>Revenue</Text>
             </View>
-            <Text style={styles.statValue}>24.500 ₺</Text>
-            <Text style={styles.statSubtitle}>Bugünkü gelir</Text>
-            <Text style={styles.statDetail}>Bu ay: 356.000 ₺</Text>
+            <Text style={styles.statValue}>$24,500</Text>
+            <Text style={styles.statSubtitle}>Today's revenue</Text>
+            <Text style={styles.statDetail}>This month: $356,000</Text>
           </View>
           
           {/* Reservations Card */}
           <View style={styles.statCard}>
             <View style={styles.statHeader}>
               <MaterialIcons name="event-available" size={24} color="#1976D2" />
-              <Text style={styles.statTitle}>Rezervasyonlar</Text>
+              <Text style={styles.statTitle}>Reservations</Text>
             </View>
             <Text style={styles.statValue}>32</Text>
-            <Text style={styles.statSubtitle}>Önümüzdeki 7 gün</Text>
+            <Text style={styles.statSubtitle}>Next 7 days</Text>
           </View>
         </View>
         
         {/* Quick Actions */}
-        <Text style={styles.sectionTitle}>Hızlı Erişim</Text>
+        <Text style={styles.sectionTitle}>Quick Access</Text>
         <View style={styles.quickActions}>
           <TouchableOpacity 
             style={[styles.actionButton, { backgroundColor: '#4C3A89' }]}
             onPress={() => router.push('/rooms')}
           >
             <MaterialIcons name="meeting-room" size={24} color="white" />
-            <Text style={styles.actionButtonText}>ODA DURUMUNU GÖRÜNTÜLE</Text>
+            <Text style={styles.actionButtonText}>VIEW ROOM STATUS</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -123,7 +132,7 @@ export default function DashboardScreen() {
             onPress={() => router.push('/checkIn')}
           >
             <MaterialIcons name="login" size={24} color="white" />
-            <Text style={styles.actionButtonText}>YENİ GİRİŞ İŞLEMİ</Text>
+            <Text style={styles.actionButtonText}>NEW CHECK-IN</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -131,7 +140,7 @@ export default function DashboardScreen() {
             onPress={() => router.push('/checkOut')}
           >
             <MaterialIcons name="logout" size={24} color="white" />
-            <Text style={styles.actionButtonText}>YENİ ÇIKIŞ İŞLEMİ</Text>
+            <Text style={styles.actionButtonText}>NEW CHECK-OUT</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -139,34 +148,34 @@ export default function DashboardScreen() {
             onPress={() => router.push('/customerInfo')}
           >
             <MaterialIcons name="people" size={24} color="white" />
-            <Text style={styles.actionButtonText}>MÜŞTERİ LİSTESİ</Text>
+            <Text style={styles.actionButtonText}>CUSTOMER LIST</Text>
           </TouchableOpacity>
         </View>
         
         {/* Database Status */}
         <View style={styles.databaseStatus}>
-          <Text style={styles.databaseTitle}>Veritabanı Durumu</Text>
+          <Text style={styles.databaseTitle}>Database Status</Text>
           <View style={styles.databaseDetails}>
             <View style={styles.databaseItem}>
-              <Text style={styles.databaseLabel}>Toplam Müşteri:</Text>
+              <Text style={styles.databaseLabel}>Total Customers:</Text>
               <Text style={styles.databaseValue}>250</Text>
             </View>
             
             <View style={styles.databaseItem}>
-              <Text style={styles.databaseLabel}>Son Güncelleme:</Text>
+              <Text style={styles.databaseLabel}>Last Update:</Text>
               <Text style={styles.databaseValue}>26.03.2025 22:54:30</Text>
             </View>
             
             <View style={styles.databaseItem}>
-              <Text style={styles.databaseLabel}>Veritabanı Bağlantısı:</Text>
-              <Text style={[styles.databaseValue, styles.activeStatus]}>Aktif</Text>
+              <Text style={styles.databaseLabel}>Database Connection:</Text>
+              <Text style={[styles.databaseValue, styles.activeStatus]}>Active</Text>
             </View>
           </View>
         </View>
         
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>© 2023 Otel Yönetim Sistemi - Tüm Hakları Saklıdır</Text>
+          <Text style={styles.footerText}>© 2023 Hotel Management System - All Rights Reserved</Text>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -179,33 +188,26 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
   },
   header: {
-    backgroundColor: '#3C3169',
-    paddingTop: 10,
-    paddingBottom: 10,
-    paddingHorizontal: 15,
+    backgroundColor: '#6B3DC9',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
   },
   headerTitle: {
     color: 'white',
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
   },
-  headerRight: {
+  logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  profileButton: {
-    marginRight: 10,
-  },
-  username: {
-    color: 'white',
-    fontSize: 16,
-    marginRight: 10,
-  },
-  logoutButton: {
-    padding: 5,
+  logoutText: {
+    color: '#fff',
+    marginLeft: 5,
+    fontWeight: 'bold',
   },
   content: {
     flex: 1,
@@ -214,14 +216,20 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 20,
     color: '#333',
+    marginBottom: 5,
+  },
+  userInfo: {
+    fontSize: 16,
+    color: '#555',
+    marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 15,
-    color: '#555',
+    color: '#333',
+    marginTop: 15,
+    marginBottom: 10,
   },
   statsContainer: {
     flexDirection: 'row',

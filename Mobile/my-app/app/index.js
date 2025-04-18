@@ -1,30 +1,66 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, StatusBar, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, StatusBar, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../context/AuthContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [username, setUsername] = useState('');
+  const { login, loading, error, isAuthenticated, autoLoginDisabled } = useAuth();
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   
-  const handleLogin = () => {
-    if (!username.trim()) {
-      Alert.alert('Hata', 'Lütfen kullanıcı adınızı girin.');
+  // If user is already authenticated and auto login is not disabled, navigate to dashboard
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      // Clear any saved credentials initially to prevent auto-login
+      if (!isAuthenticated) {
+        await AsyncStorage.setItem('autoLoginDisabled', 'true');
+      }
+      
+      if (isAuthenticated && !autoLoginDisabled) {
+        console.log('User is authenticated and auto login enabled, redirecting to dashboard');
+        router.replace('/(tabs)');
+      } else {
+        console.log('Not auto-redirecting: isAuthenticated =', isAuthenticated, 'autoLoginDisabled =', autoLoginDisabled);
+      }
+    };
+    
+    checkAuthStatus();
+  }, [isAuthenticated, autoLoginDisabled, router]);
+  
+  const handleLogin = async () => {
+    if (!email.trim()) {
+      Alert.alert('Error', 'Please enter your email.');
       return;
     }
     
     if (!password.trim()) {
-      Alert.alert('Hata', 'Lütfen şifrenizi girin.');
+      Alert.alert('Error', 'Please enter your password.');
       return;
     }
     
-    // In a real app, you would check credentials with an API
-    // For now, we'll just navigate to the dashboard
-    router.replace({
-      pathname: '/(tabs)',
-      params: { username: username }
-    });
+    setIsLoggingIn(true);
+    
+    try {
+      console.log('Attempting login...');
+      await login(email, password);
+      
+      console.log('Login successful, navigating to dashboard...');
+      router.replace('/(tabs)');
+    } catch (error) {
+      console.log('Login failed:', error.message);
+      
+      // Show error alert
+      Alert.alert(
+        'Login Failed', 
+        'Invalid email or password. Please check your credentials and try again.'
+      );
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
   
   return (
@@ -41,28 +77,37 @@ export default function LoginScreen() {
         </View>
         
         <View style={styles.cardContainer}>
-          <Text style={styles.title}>Giriş Yap</Text>
+          <Text style={styles.title}>Login</Text>
           
           <TextInput
             style={styles.input}
-            placeholder="Kullanıcı Adı"
+            placeholder="Email"
             placeholderTextColor="#666"
-            value={username}
-            onChangeText={setUsername}
+            value={email}
+            onChangeText={setEmail}
             autoCapitalize="none"
+            keyboardType="email-address"
           />
           
           <TextInput
             style={styles.input}
-            placeholder="Şifre"
+            placeholder="Password"
             placeholderTextColor="#666"
             secureTextEntry
             value={password}
             onChangeText={setPassword}
           />
           
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Text style={styles.loginButtonText}>Giriş Yap</Text>
+          <TouchableOpacity 
+            style={styles.loginButton} 
+            onPress={handleLogin}
+            disabled={isLoggingIn}
+          >
+            {isLoggingIn ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.loginButtonText}>Login</Text>
+            )}
           </TouchableOpacity>
         </View>
       </LinearGradient>
