@@ -7,29 +7,31 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { login, loading, error, isAuthenticated, autoLoginDisabled } = useAuth();
+  const { login, loading, error, isAuthenticated, autoLoginDisabled, setAutoLoginDisabled } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState('');
   
-  // If user is already authenticated and auto login is not disabled, navigate to dashboard
+  // Force disable auto-login when on login screen
   useEffect(() => {
-    const checkAuthStatus = async () => {
-      // Clear any saved credentials initially to prevent auto-login
-      if (!isAuthenticated) {
-        await AsyncStorage.setItem('autoLoginDisabled', 'true');
-      }
+    const ensureManualLogin = async () => {
+      console.log('Login screen mounted - disabling auto-login');
       
-      if (isAuthenticated && !autoLoginDisabled) {
-        console.log('User is authenticated and auto login enabled, redirecting to dashboard');
-        router.replace('/(tabs)');
-      } else {
-        console.log('Not auto-redirecting: isAuthenticated =', isAuthenticated, 'autoLoginDisabled =', autoLoginDisabled);
+      // Always set auto login disabled when on login screen
+      await AsyncStorage.setItem('autoLoginDisabled', 'true');
+      setAutoLoginDisabled(true);
+      
+      // Check if coming from logout (if so, make sure auth state is cleared)
+      const isLoggedOut = await AsyncStorage.getItem('isLoggedOut');
+      if (isLoggedOut === 'true') {
+        // Reset this flag
+        await AsyncStorage.removeItem('isLoggedOut');
       }
     };
     
-    checkAuthStatus();
-  }, [isAuthenticated, autoLoginDisabled, router]);
+    ensureManualLogin();
+  }, []);
   
   const handleLogin = async () => {
     if (!email.trim()) {
@@ -43,21 +45,20 @@ export default function LoginScreen() {
     }
     
     setIsLoggingIn(true);
+    setLoginError(''); // Clear any previous error messages
     
     try {
       console.log('Attempting login...');
       await login(email, password);
       
+      // After successful login, enable auto login for this session
+      await AsyncStorage.setItem('autoLoginDisabled', 'false');
+      
       console.log('Login successful, navigating to dashboard...');
       router.replace('/(tabs)');
     } catch (error) {
       console.log('Login failed:', error.message);
-      
-      // Show error alert
-      Alert.alert(
-        'Login Failed', 
-        'Invalid email or password. Please check your credentials and try again.'
-      );
+      setLoginError(error.message || 'Invalid email or password. Please check your credentials and try again.');
     } finally {
       setIsLoggingIn(false);
     }
@@ -97,6 +98,12 @@ export default function LoginScreen() {
             value={password}
             onChangeText={setPassword}
           />
+          
+          {loginError ? (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{loginError}</Text>
+            </View>
+          ) : null}
           
           <TouchableOpacity 
             style={styles.loginButton} 
@@ -176,5 +183,19 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  errorContainer: {
+    backgroundColor: '#FFD1D1',
+    borderWidth: 1,
+    borderColor: '#FF5757',
+    borderRadius: 5,
+    padding: 10,
+    marginBottom: 10,
+    width: '100%',
+  },
+  errorText: {
+    color: '#FF5757',
+    fontSize: 14,
+    textAlign: 'center',
   },
 }); 

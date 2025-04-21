@@ -122,27 +122,46 @@ export const AuthProvider = ({ children }) => {
     console.log('Logout function called');
     try {
       setLoading(true);
+      setError(null);
+      
+      // Clear all auth-related items from storage
+      const keysToRemove = [
+        'user', 
+        'token', 
+        'sessionExpiry'
+      ];
+      
+      const keysToSet = {
+        'autoLoginDisabled': 'true',
+        'isLoggedOut': 'true'
+      };
       
       // Clear storage
-      console.log('Clearing storage...');
-      await AsyncStorage.removeItem('user');
-      await AsyncStorage.removeItem('token');
-      await AsyncStorage.removeItem('sessionExpiry');
+      console.log('Clearing auth storage...');
       
-      // Disable auto login
-      await AsyncStorage.setItem('autoLoginDisabled', 'true');
-      setAutoLoginDisabled(true);
+      // Remove keys
+      const removePromises = keysToRemove.map(key => AsyncStorage.removeItem(key));
+      
+      // Set new values
+      const setPromises = Object.entries(keysToSet).map(
+        ([key, value]) => AsyncStorage.setItem(key, value)
+      );
+      
+      // Execute all storage operations in parallel
+      await Promise.all([...removePromises, ...setPromises]);
       
       // Clear state
-      console.log('Clearing auth state...');
+      console.log('Resetting auth state...');
       setUser(null);
       setToken(null);
+      setAutoLoginDisabled(true);
       
       console.log('Logout successful');
       return true;
     } catch (error) {
       console.error('Logout error:', error);
-      return false;
+      setError('Failed to logout: ' + error.message);
+      throw error; // Re-throw to allow handling in UI
     } finally {
       setLoading(false);
     }

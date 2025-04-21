@@ -1,13 +1,30 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, StatusBar, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, SafeAreaView, TouchableOpacity, StatusBar, Alert, Modal, TextInput } from 'react-native';
 import { Ionicons, MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
+import { authService } from '@/services/api';
 
 export default function DashboardScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { user, logout } = useAuth();
+  const [registerModalVisible, setRegisterModalVisible] = useState(false);
+  const [registerData, setRegisterData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    userName: '',
+    password: '',
+    confirmPassword: '',
+    phoneNumber: '',
+    role: '',
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+  
+  // Available roles
+  const roles = ['Admin', 'Accountant', 'Receptionist'];
   
   // Use the email from the context or params as a fallback
   const userEmail = user?.email || params.email || "user@example.com";
@@ -25,31 +42,237 @@ export default function DashboardScreen() {
         { 
           text: "Logout", 
           onPress: async () => {
-            console.log('Logging out...');
-            await logout();
-            console.log('Logged out, redirecting to login screen...');
-            router.replace('/');
+            try {
+              console.log('Logging out...');
+              // First perform the logout to clear all authentication state
+              const success = await logout();
+              
+              if (success) {
+                console.log('Logged out successfully, redirecting to login screen...');
+                
+                // Ensure we're navigating to the login screen correctly
+                // Use replace to prevent going back to the dashboard with the back button
+                setTimeout(() => {
+                  router.replace('/');
+                }, 100); // Small delay to ensure state updates complete
+              } else {
+                console.error('Logout was not successful');
+                Alert.alert('Logout Error', 'An error occurred while logging out. Please try again.');
+              }
+            } catch (error) {
+              console.error('Error during logout:', error);
+              Alert.alert('Logout Error', 'An error occurred while logging out. Please try again.');
+            }
           }
         }
       ]
     );
+  };
+
+  const handleRegister = async () => {
+    // Validate form data
+    if (!registerData.firstName || !registerData.lastName || !registerData.email || 
+        !registerData.userName || !registerData.password || !registerData.confirmPassword || !registerData.role) {
+      Alert.alert('Validation Error', 'All fields except phone number are required');
+      return;
+    }
+
+    if (registerData.password !== registerData.confirmPassword) {
+      Alert.alert('Validation Error', 'Passwords do not match');
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      
+      // Call the API to register the user
+      const response = await authService.register(registerData);
+      
+      // Close modal and show success message
+      setRegisterModalVisible(false);
+      setRegisterData({
+        firstName: '',
+        lastName: '',
+        email: '',
+        userName: '',
+        password: '',
+        confirmPassword: '',
+        phoneNumber: '',
+        role: '',
+      });
+      
+      Alert.alert('Success', 'Employee registered successfully');
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to register employee';
+      Alert.alert('Registration Error', errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  const selectRole = (role: string) => {
+    setRegisterData({...registerData, role});
+    setShowRoleDropdown(false);
   };
   
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
       
-      {/* Custom Header with Logout */}
+      {/* Custom Header with Register and Logout */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Hotel Management System</Text>
-        <TouchableOpacity 
-          style={styles.logoutButton} 
-          onPress={handleLogout}
-        >
-          <MaterialIcons name="logout" size={24} color="#fff" />
-          <Text style={styles.logoutText}>Logout</Text>
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity 
+            style={styles.registerButton} 
+            onPress={() => setRegisterModalVisible(true)}
+          >
+            <MaterialIcons name="person-add" size={24} color="#fff" />
+            <Text style={styles.buttonText}>Register</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.logoutButton} 
+            onPress={handleLogout}
+          >
+            <MaterialIcons name="logout" size={24} color="#fff" />
+            <Text style={styles.buttonText}>Logout</Text>
+          </TouchableOpacity>
+        </View>
       </View>
+      
+      {/* Registration Modal */}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={registerModalVisible}
+        onRequestClose={() => setRegisterModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Register New Employee</Text>
+              <TouchableOpacity onPress={() => setRegisterModalVisible(false)}>
+                <MaterialIcons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.modalContent}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>First Name</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter first name"
+                  value={registerData.firstName}
+                  onChangeText={(text) => setRegisterData({...registerData, firstName: text})}
+                />
+              </View>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Last Name</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter last name"
+                  value={registerData.lastName}
+                  onChangeText={(text) => setRegisterData({...registerData, lastName: text})}
+                />
+              </View>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Email</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter email address"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  value={registerData.email}
+                  onChangeText={(text) => setRegisterData({...registerData, email: text})}
+                />
+              </View>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Phone Number (Optional)</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter phone number"
+                  keyboardType="phone-pad"
+                  value={registerData.phoneNumber}
+                  onChangeText={(text) => setRegisterData({...registerData, phoneNumber: text})}
+                />
+              </View>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Username</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter username"
+                  autoCapitalize="none"
+                  value={registerData.userName}
+                  onChangeText={(text) => setRegisterData({...registerData, userName: text})}
+                />
+              </View>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Role</Text>
+                <TouchableOpacity 
+                  style={styles.roleSelector}
+                  onPress={() => setShowRoleDropdown(!showRoleDropdown)}
+                >
+                  <Text style={registerData.role ? styles.roleText : styles.placeholderText}>
+                    {registerData.role || "Select a role"}
+                  </Text>
+                  <MaterialIcons name={showRoleDropdown ? "arrow-drop-up" : "arrow-drop-down"} size={24} color="#555" />
+                </TouchableOpacity>
+                
+                {showRoleDropdown && (
+                  <View style={styles.roleDropdown}>
+                    {roles.map((role) => (
+                      <TouchableOpacity 
+                        key={role} 
+                        style={styles.roleOption}
+                        onPress={() => selectRole(role)}
+                      >
+                        <Text style={styles.roleOptionText}>{role}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Password</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter password"
+                  secureTextEntry={true}
+                  value={registerData.password}
+                  onChangeText={(text) => setRegisterData({...registerData, password: text})}
+                />
+              </View>
+              
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Confirm Password</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Confirm password"
+                  secureTextEntry={true}
+                  value={registerData.confirmPassword}
+                  onChangeText={(text) => setRegisterData({...registerData, confirmPassword: text})}
+                />
+              </View>
+              
+              <TouchableOpacity 
+                style={styles.registerSubmitButton} 
+                onPress={handleRegister}
+                disabled={isLoading}
+              >
+                <Text style={styles.registerSubmitButtonText}>
+                  {isLoading ? 'Processing...' : 'Register Employee'}
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
       
       <ScrollView style={styles.content}>
         {/* Greeting */}
@@ -200,13 +423,125 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
   },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  registerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 15,
+  },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  logoutText: {
+  buttonText: {
     color: '#fff',
     marginLeft: 5,
+    fontWeight: 'bold',
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    width: '85%',
+    maxHeight: '80%',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#6B3DC9',
+  },
+  modalContent: {
+    padding: 15,
+  },
+  inputGroup: {
+    marginBottom: 15,
+  },
+  inputLabel: {
+    fontSize: 16,
+    marginBottom: 5,
+    color: '#333',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    padding: 10,
+    fontSize: 16,
+    backgroundColor: '#f9f9f9',
+  },
+  // Role selector styles
+  roleSelector: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    padding: 10,
+    backgroundColor: '#f9f9f9',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  roleText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  placeholderText: {
+    fontSize: 16,
+    color: '#aaa',
+  },
+  roleDropdown: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    backgroundColor: 'white',
+    marginTop: 5,
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 1.5,
+  },
+  roleOption: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  roleOptionText: {
+    fontSize: 16,
+    color: '#333',
+  },
+  registerSubmitButton: {
+    backgroundColor: '#6B3DC9',
+    padding: 15,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  registerSubmitButtonText: {
+    color: 'white',
+    fontSize: 16,
     fontWeight: 'bold',
   },
   content: {
