@@ -118,25 +118,29 @@ export default function DashboardScreen() {
       <StatusBar barStyle="light-content" />
       
       {/* Custom Header with Register and Logout */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Hotel Management System</Text>
-        <View style={styles.headerButtons}>
-          <TouchableOpacity 
-            style={styles.registerButton} 
-            onPress={() => setRegisterModalVisible(true)}
-          >
-            <MaterialIcons name="person-add" size={24} color="#fff" />
-            <Text style={styles.buttonText}>Register</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.logoutButton} 
-            onPress={handleLogout}
-          >
-            <MaterialIcons name="logout" size={24} color="#fff" />
-            <Text style={styles.buttonText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+<View style={styles.header}>
+  <Text style={styles.headerTitle}>Hotel Management System</Text>
+  <View style={styles.headerButtons}>
+    {/* Conditionally render Register button based on Admin OR SuperAdmin role */}
+    {/* BURAYI DÜZELTİN: user?.Roles yerine user?.roles kullanın */}
+    {(user?.roles?.includes('Admin') || user?.roles?.includes('SuperAdmin')) && (
+      <TouchableOpacity
+        style={styles.registerButton}
+        onPress={() => setRegisterModalVisible(true)}
+      >
+        <MaterialIcons name="person-add" size={24} color="#fff" />
+        <Text style={styles.buttonText}>Register</Text>
+      </TouchableOpacity>
+    )}
+    <TouchableOpacity
+      style={styles.logoutButton}
+      onPress={handleLogout}
+    >
+      <MaterialIcons name="logout" size={24} color="#fff" />
+      <Text style={styles.buttonText}>Logout</Text>
+    </TouchableOpacity>
+  </View>
+</View>
       
       {/* Registration Modal */}
       <Modal
