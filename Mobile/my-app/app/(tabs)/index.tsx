@@ -17,14 +17,13 @@ export default function DashboardScreen() {
     userName: '',
     password: '',
     confirmPassword: '',
-    phoneNumber: '',
     role: '',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showRoleDropdown, setShowRoleDropdown] = useState(false);
   
   // Available roles
-  const roles = ['Admin', 'Accountant', 'Receptionist'];
+  const roles = ['Accountant', 'Receptionist'];
   
   // Use the email from the context or params as a fallback
   const userEmail = user?.email || params.email || "user@example.com";
@@ -73,7 +72,7 @@ export default function DashboardScreen() {
     // Validate form data
     if (!registerData.firstName || !registerData.lastName || !registerData.email || 
         !registerData.userName || !registerData.password || !registerData.confirmPassword || !registerData.role) {
-      Alert.alert('Validation Error', 'All fields except phone number are required');
+      Alert.alert('Validation Error', 'All fields are required');
       return;
     }
 
@@ -97,7 +96,6 @@ export default function DashboardScreen() {
         userName: '',
         password: '',
         confirmPassword: '',
-        phoneNumber: '',
         role: '',
       });
       
@@ -186,17 +184,6 @@ export default function DashboardScreen() {
                   autoCapitalize="none"
                   value={registerData.email}
                   onChangeText={(text) => setRegisterData({...registerData, email: text})}
-                />
-              </View>
-              
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Phone Number (Optional)</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="Enter phone number"
-                  keyboardType="phone-pad"
-                  value={registerData.phoneNumber}
-                  onChangeText={(text) => setRegisterData({...registerData, phoneNumber: text})}
                 />
               </View>
               
