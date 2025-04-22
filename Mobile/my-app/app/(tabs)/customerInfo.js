@@ -29,6 +29,24 @@ export default function CustomerInfoScreen() {
   const [filteredCustomers, setFilteredCustomers] = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingCustomerData, setEditingCustomerData] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [addModalVisible, setAddModalVisible] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [newCustomerData, setNewCustomerData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: '',
+    status: 'Standard',
+    nationality: '',
+    idNumber: '',
+    notes: '',
+    birthDate: '',
+  });
   
   // Pagination
   const [page, setPage] = useState(1);
@@ -126,11 +144,180 @@ export default function CustomerInfoScreen() {
 
   const viewCustomerDetails = (customer) => {
     setSelectedCustomer(customer);
+    setEditingCustomerData({ 
+        ...customer, 
+        FullName: getFullName(customer)
+    }); 
+    setIsEditing(false);
     setDetailModalVisible(true);
   };
 
+  const handleDeleteCustomer = async (customerId) => {
+    if (!customerId) return;
+
+    Alert.alert(
+      "Confirm Delete",
+      "Are you sure you want to delete this customer?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            console.log(`[handleDeleteCustomer] Delete confirmed for ID: ${customerId}`);
+            setIsDeleting(true);
+            try {
+              console.log(`[handleDeleteCustomer] Calling customerService.deleteCustomer...`);
+              await customerService.deleteCustomer(customerId);
+              console.log(`[handleDeleteCustomer] customerService.deleteCustomer finished.`);
+              Alert.alert("Success", "Customer deleted successfully.");
+              
+              setCustomers(prev => prev.filter(c => c.id !== customerId));
+              setFilteredCustomers(prev => prev.filter(c => c.id !== customerId));
+              
+              setDetailModalVisible(false);
+              setSelectedCustomer(null);
+            } catch (error) {
+              console.error('Error deleting customer:', error);
+              Alert.alert("Error", error.message || "Failed to delete customer.");
+            } finally {
+              setIsDeleting(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleUpdateCustomer = async () => {
+    if (!editingCustomerData || !editingCustomerData.id) {
+        Alert.alert("Error", "No customer data to update.");
+        return;
+    }
+
+    if (!editingCustomerData.FullName || !editingCustomerData.Email || !editingCustomerData.Phone) {
+      Alert.alert("Validation Error", "Name, Email, and Phone cannot be empty.");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const nameParts = editingCustomerData.FullName.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      const payload = {
+        id: editingCustomerData.id,
+        firstName: firstName,
+        lastName: lastName,
+        email: editingCustomerData.Email,
+        phone: editingCustomerData.Phone,
+        address: editingCustomerData.Address, 
+        status: editingCustomerData.Status,
+        nationality: selectedCustomer?.nationality || '',
+        idNumber: selectedCustomer?.idNumber || '',
+        notes: selectedCustomer?.notes || '',
+        birthDate: selectedCustomer?.birthDate || new Date().toISOString(),
+      };
+
+      await customerService.updateCustomer(editingCustomerData.id, payload);
+      Alert.alert("Success", "Customer updated successfully.");
+
+      const updatedCustomerForState = {
+          ...selectedCustomer,
+          ...editingCustomerData,
+          FullName: editingCustomerData.FullName 
+      };
+
+      const updateList = (list) => list.map(c => c.id === editingCustomerData.id ? updatedCustomerForState : c);
+      setCustomers(updateList);
+      setFilteredCustomers(updateList);
+
+      setSelectedCustomer(updatedCustomerForState);
+      setIsEditing(false);
+    } catch (error) {
+      console.error('Error updating customer:', error);
+      Alert.alert("Error", error.message || "Failed to update customer.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleEditInputChange = (field, value) => {
+    setEditingCustomerData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAddInputChange = (field, value) => {
+    setNewCustomerData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAddCustomer = async () => {
+    if (!newCustomerData.firstName || !newCustomerData.lastName || !newCustomerData.email || !newCustomerData.phone || !newCustomerData.status) {
+      Alert.alert("Validation Error", "First Name, Last Name, Email, Phone, and Status are required.");
+      return;
+    }
+
+    setIsAdding(true);
+    try {
+      // Format birthDate: Attempt to parse and convert to ISO string, send null if invalid/empty
+      let formattedBirthDate = null;
+      if (newCustomerData.birthDate) {
+        const date = new Date(newCustomerData.birthDate);
+        // Check if the date is valid after parsing
+        if (!isNaN(date.getTime())) {
+            formattedBirthDate = date.toISOString();
+        }
+        else {
+            console.warn('Invalid Birth Date entered, sending null'); 
+            // Optional: Alert the user about invalid date format
+            // Alert.alert("Warning", "Invalid Birth Date format. Please use YYYY-MM-DD.");
+        }
+      }
+
+      // Prepare payload, mapping empty strings to null for optional fields
+      const payload = {
+          firstName: newCustomerData.firstName,
+          lastName: newCustomerData.lastName,
+          email: newCustomerData.email,
+          phone: newCustomerData.phone,
+          address: newCustomerData.address || null,
+          status: newCustomerData.status, // Assuming backend accepts 'Standard' or 'VIP'
+          nationality: newCustomerData.nationality || null,
+          idNumber: newCustomerData.idNumber || null,
+          notes: newCustomerData.notes || null,
+          birthDate: formattedBirthDate 
+      };
+
+      console.log('Sending payload:', JSON.stringify(payload, null, 2)); // Log the payload being sent
+
+      await customerService.createCustomer(payload);
+      Alert.alert("Success", "Customer added successfully.");
+      setAddModalVisible(false);
+      setNewCustomerData({
+          firstName: '',
+          lastName: '',
+          email: '',
+          phone: '',
+          address: '',
+          status: 'Standard', // Reset status to corrected default
+          nationality: '',
+          idNumber: '',
+          notes: '',
+          birthDate: '',
+      });
+      fetchCustomers(1, true);
+    } catch (error) {
+      console.error('Error adding customer:', error);
+      Alert.alert("Error", error.message || "Failed to add customer.");
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
   const renderCustomerItem = ({ item }) => {
-    // Use the correct fields from the API response
     const customerName = getFullName(item);
     const customerPhone = item.Phone || 'No phone';
     const customerEmail = item.Email || 'No email';
@@ -139,14 +326,12 @@ export default function CustomerInfoScreen() {
     const customerStatus = item.Status === 'VIP' ? 'VIP' : 'Standart';
     const isVip = customerStatus === 'VIP';
     
-    // Log the customer data to help debug
     console.log('Customer data:', { 
       FullName: item.FullName, 
       Phone: item.Phone,
       Email: item.Email,
       Status: item.Status,
       id: item.id,
-      // idNumber: item.idNumber, // Commented out as idNumber is not in the provided API structure
       displayName: customerName
     });
     
@@ -196,81 +381,117 @@ export default function CustomerInfoScreen() {
     );
   };
 
-  // Customer details modal
   const renderCustomerDetailModal = () => {
     if (!selectedCustomer) return null;
     
-    const customerName = getFullName(selectedCustomer);
-    const customerPhone = selectedCustomer.Phone || 'No phone number provided';
-    const customerEmail = selectedCustomer.Email || 'No email provided';
-    const customerAddress = selectedCustomer.Address || 'No address provided';
-    const customerId = selectedCustomer.id?.toString() || '';
-    const customerStatus = selectedCustomer.Status === 'VIP' ? 'VIP' : 'Standart';
-    
+    const displayData = isEditing ? editingCustomerData : selectedCustomer;
+
+    const customerName = getFullName(displayData);
+    const customerPhone = displayData.Phone || (isEditing ? '' : 'No phone number provided');
+    const customerEmail = displayData.Email || (isEditing ? '' : 'No email provided');
+    const customerAddress = displayData.Address || (isEditing ? '' : 'No address provided');
+    const customerStatus = displayData.Status || 'Standart';
+    const isVip = customerStatus === 'VIP';
+
     return (
       <Modal
         visible={detailModalVisible}
         transparent={true}
         animationType="slide"
-        onRequestClose={() => setDetailModalVisible(false)}
+        onRequestClose={() => {
+            setDetailModalVisible(false);
+            setIsEditing(false);
+        }}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Customer Details</Text>
-              <TouchableOpacity onPress={() => setDetailModalVisible(false)}>
+              <Text style={styles.modalTitle}>{isEditing ? 'Edit Customer' : 'Customer Details'}</Text>
+              <TouchableOpacity onPress={() => {
+                  setDetailModalVisible(false);
+                  setIsEditing(false);
+              }}>
                 <MaterialIcons name="close" size={24} color="#333" />
               </TouchableOpacity>
             </View>
             
             <ScrollView style={styles.modalContent}>
               <View style={styles.customerDetailHeader}>
-                <View style={[styles.detailAvatar, { backgroundColor: getAvatarColor(selectedCustomer.id) }]}>
-                  <Text style={styles.detailAvatarText}>{getInitials(customerName)}</Text>
-                </View>
-                <View style={styles.customerDetailInfo}>
-                  <Text style={styles.detailName}>{customerName}</Text>
+                 <View style={[styles.detailAvatar, { backgroundColor: getAvatarColor(displayData.id) }]}>
+                   <Text style={styles.detailAvatarText}>{getInitials(customerName)}</Text>
+                 </View>
+                 <View style={styles.customerDetailInfo}>
+                  {isEditing ? (
+                    <TextInput 
+                      style={[styles.detailName, styles.editInput]} 
+                      value={customerName} 
+                      onChangeText={(text) => handleEditInputChange('FullName', text)}
+                      placeholder="Full Name"
+                    />
+                  ) : (
+                    <Text style={styles.detailName}>{customerName}</Text>
+                  )}
                   <View style={[styles.statusBadge, { 
-                    backgroundColor: customerStatus === 'VIP' ? '#FF5252' : '#F5F5F5',
-                    borderColor: customerStatus === 'VIP' ? '#FF5252' : '#DDDDDD'
-                  }]}>
-                    <Text style={[styles.statusText, { 
-                      color: customerStatus === 'VIP' ? '#FFFFFF' : '#555555' 
-                    }]}>{customerStatus}</Text>
-                  </View>
-                </View>
-              </View>
+                      backgroundColor: isVip ? '#FF5252' : '#F5F5F5',
+                      borderColor: isVip ? '#FF5252' : '#DDDDDD'
+                    }]}>
+                      <Text style={[styles.statusText, { 
+                        color: isVip ? '#FFFFFF' : '#555555' 
+                      }]}>{customerStatus}</Text>
+                    </View>
+                 </View>
+               </View>
               
               <View style={styles.detailSection}>
                 <Text style={styles.sectionTitle}>Contact Information</Text>
-                
                 <View style={styles.detailItem}>
                   <MaterialIcons name="phone" size={20} color="#666" />
-                  <Text style={styles.detailText}>
-                    {customerPhone}
-                  </Text>
+                  {isEditing ? (
+                    <TextInput 
+                      style={[styles.detailText, styles.editInput]} 
+                      value={customerPhone} 
+                      onChangeText={(text) => handleEditInputChange('Phone', text)}
+                      placeholder="Phone Number"
+                      keyboardType="phone-pad"
+                    />
+                  ) : (
+                    <Text style={styles.detailText}>{customerPhone}</Text>
+                  )}
                 </View>
-                
                 <View style={styles.detailItem}>
                   <MaterialIcons name="email" size={20} color="#666" />
-                  <Text style={styles.detailText}>
-                    {customerEmail}
-                  </Text>
+                  {isEditing ? (
+                    <TextInput 
+                      style={[styles.detailText, styles.editInput]} 
+                      value={customerEmail} 
+                      onChangeText={(text) => handleEditInputChange('Email', text)}
+                      placeholder="Email Address"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                    />
+                  ) : (
+                    <Text style={styles.detailText}>{customerEmail}</Text>
+                  )}
                 </View>
-                
                 <View style={styles.detailItem}>
                   <MaterialIcons name="location-on" size={20} color="#666" />
-                  <Text style={styles.detailText}>
-                    {customerAddress}
-                  </Text>
+                   {isEditing ? (
+                    <TextInput 
+                      style={[styles.detailText, styles.editInput]} 
+                      value={customerAddress} 
+                      onChangeText={(text) => handleEditInputChange('Address', text)}
+                      placeholder="Address"
+                    />
+                  ) : (
+                    <Text style={styles.detailText}>{customerAddress}</Text>
+                  )}
                 </View>
               </View>
               
               <View style={styles.detailSection}>
                 <Text style={styles.sectionTitle}>Reservation History</Text>
-                
-                {(selectedCustomer.reservations && selectedCustomer.reservations.length > 0) ? (
-                  selectedCustomer.reservations.map((reservation, index) => (
+                {(displayData.reservations && displayData.reservations.length > 0) ? (
+                  displayData.reservations.map((reservation, index) => (
                     <View key={index} style={styles.reservationItem}>
                       <View style={styles.reservationHeader}>
                         <Text style={styles.reservationDate}>
@@ -295,40 +516,193 @@ export default function CustomerInfoScreen() {
               
               <View style={styles.detailSection}>
                 <Text style={styles.sectionTitle}>Additional Information</Text>
-                
-                <View style={styles.detailItem}>
-                  <MaterialIcons name="person" size={20} color="#666" />
-                  <Text style={styles.detailText}>
-                    {/* ID: {customerId || 'N/A'} */}
-                    {/* Commented out as idNumber is not in the provided API structure, using item.id instead if needed */} 
-                    ID: {selectedCustomer.id ? `Internal ID: ${selectedCustomer.id}` : 'N/A'}
-                  </Text>
-                </View>
-                
-                <View style={styles.detailItem}>
-                  <MaterialIcons name="date-range" size={20} color="#666" />
-                  <Text style={styles.detailText}>
-                    Created on: {selectedCustomer.createdAt || 'Unknown date'}
-                  </Text>
-                </View>
-                
-                <View style={styles.detailItem}>
-                  <MaterialIcons name="loyalty" size={20} color="#666" />
-                  <Text style={styles.detailText}>
-                    Loyalty Points: {selectedCustomer.loyaltyPoints || '0'}
-                  </Text>
-                </View>
+                 <View style={styles.detailItem}>
+                   <MaterialIcons name="person" size={20} color="#666" />
+                   <Text style={styles.detailText}> 
+                     ID: {displayData.id ? `Internal ID: ${displayData.id}` : 'N/A'}
+                   </Text>
+                 </View>
               </View>
               
               <View style={styles.actionButtons}>
-                <TouchableOpacity style={styles.actionButton}>
-                  <MaterialIcons name="edit" size={20} color="white" />
-                  <Text style={styles.actionButtonText}>Edit</Text>
+                {isEditing ? (
+                  <>
+                    <TouchableOpacity 
+                      style={[styles.actionButton, { backgroundColor: '#FFA000' }]}
+                      onPress={() => {
+                          setIsEditing(false);
+                          setEditingCustomerData({...selectedCustomer, FullName: getFullName(selectedCustomer)});
+                      }}
+                      disabled={isSaving}
+                    >
+                      <MaterialIcons name="cancel" size={20} color="white" />
+                      <Text style={styles.actionButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.actionButton}
+                      onPress={handleUpdateCustomer}
+                      disabled={isSaving}
+                    >
+                      <MaterialIcons name="save" size={20} color="white" />
+                      <Text style={styles.actionButtonText}>{isSaving ? 'Saving...' : 'Save'}</Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    <TouchableOpacity 
+                      style={styles.actionButton}
+                      onPress={() => setIsEditing(true)}
+                    >
+                      <MaterialIcons name="edit" size={20} color="white" />
+                      <Text style={styles.actionButtonText}>Edit</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.actionButton, { backgroundColor: '#F44336' }]}
+                      onPress={() => handleDeleteCustomer(selectedCustomer?.id)}
+                      disabled={isDeleting}
+                    >
+                      <MaterialIcons name="delete" size={20} color="white" />
+                      <Text style={styles.actionButtonText}>{isDeleting ? 'Deleting...' : 'Delete'}</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  const renderAddCustomerModal = () => {
+    return (
+      <Modal
+        visible={addModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setAddModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add New Customer</Text>
+              <TouchableOpacity onPress={() => setAddModalVisible(false)}>
+                <MaterialIcons name="close" size={24} color="#333" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.modalContent}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>First Name *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter first name"
+                  value={newCustomerData.firstName}
+                  onChangeText={(text) => handleAddInputChange('firstName', text)}
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Last Name *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter last name"
+                  value={newCustomerData.lastName}
+                  onChangeText={(text) => handleAddInputChange('lastName', text)}
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Email *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter email address"
+                  value={newCustomerData.email}
+                  onChangeText={(text) => handleAddInputChange('email', text)}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Phone *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter phone number"
+                  value={newCustomerData.phone}
+                  onChangeText={(text) => handleAddInputChange('phone', text)}
+                  keyboardType="phone-pad"
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Address</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter address"
+                  value={newCustomerData.address}
+                  onChangeText={(text) => handleAddInputChange('address', text)}
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                 <Text style={styles.inputLabel}>Status *</Text>
+                 <TextInput
+                   style={styles.input}
+                   placeholder="VIP or Standard"
+                   value={newCustomerData.status}
+                   onChangeText={(text) => handleAddInputChange('status', text)}
+                 />
+               </View>
+               <View style={styles.inputGroup}>
+                 <Text style={styles.inputLabel}>Nationality</Text>
+                 <TextInput
+                   style={styles.input}
+                   placeholder="Enter nationality"
+                   value={newCustomerData.nationality}
+                   onChangeText={(text) => handleAddInputChange('nationality', text)}
+                 />
+               </View>
+               <View style={styles.inputGroup}>
+                 <Text style={styles.inputLabel}>ID Number</Text>
+                 <TextInput
+                   style={styles.input}
+                   placeholder="Enter ID number"
+                   value={newCustomerData.idNumber}
+                   onChangeText={(text) => handleAddInputChange('idNumber', text)}
+                 />
+               </View>
+               <View style={styles.inputGroup}>
+                 <Text style={styles.inputLabel}>Notes</Text>
+                 <TextInput
+                   style={[styles.input, { height: 80 }]}
+                   placeholder="Enter notes"
+                   value={newCustomerData.notes}
+                   onChangeText={(text) => handleAddInputChange('notes', text)}
+                   multiline
+                 />
+               </View>
+               <View style={styles.inputGroup}>
+                 <Text style={styles.inputLabel}>Birth Date</Text>
+                 <TextInput
+                   style={styles.input}
+                   placeholder="YYYY-MM-DD"
+                   value={newCustomerData.birthDate}
+                   onChangeText={(text) => handleAddInputChange('birthDate', text)}
+                 />
+               </View>
+
+              <View style={styles.actionButtons}>
+                <TouchableOpacity 
+                  style={[styles.actionButton, { backgroundColor: '#FFA000' }]} 
+                  onPress={() => setAddModalVisible(false)}
+                  disabled={isAdding}
+                >
+                  <MaterialIcons name="cancel" size={20} color="white" />
+                  <Text style={styles.actionButtonText}>Cancel</Text>
                 </TouchableOpacity>
-                
-                <TouchableOpacity style={[styles.actionButton, { backgroundColor: '#F44336' }]}>
-                  <MaterialIcons name="delete" size={20} color="white" />
-                  <Text style={styles.actionButtonText}>Delete</Text>
+                <TouchableOpacity 
+                  style={styles.actionButton} 
+                  onPress={handleAddCustomer}
+                  disabled={isAdding}
+                >
+                  <MaterialIcons name="add" size={20} color="white" />
+                  <Text style={styles.actionButtonText}>{isAdding ? 'Adding...' : 'Add Customer'}</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -421,10 +795,25 @@ export default function CustomerInfoScreen() {
       )}
       
       {renderCustomerDetailModal()}
+      {renderAddCustomerModal()}
       
       <TouchableOpacity 
         style={styles.addButton}
-        onPress={() => Alert.alert('Add Customer', 'Add new customer functionality coming soon')}
+        onPress={() => {
+            setNewCustomerData({ 
+                firstName: '',
+                lastName: '',
+                email: '',
+                phone: '',
+                address: '',
+                status: 'Standard',
+                nationality: '',
+                idNumber: '',
+                notes: '',
+                birthDate: '',
+             });
+            setAddModalVisible(true);
+        }}
       >
         <MaterialIcons name="add" size={24} color="white" />
       </TouchableOpacity>
@@ -635,7 +1024,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 3,
   },
-  // Modal styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -695,6 +1083,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 5,
+  },
+  editInput: {
+    borderBottomWidth: 1,
+    borderColor: '#ccc',
+    paddingVertical: 5,
+    fontSize: 15,
+    color: '#555',
+    flex: 1,
+    marginLeft: 10,
   },
   detailSection: {
     marginBottom: 20,
@@ -773,5 +1170,21 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 5,
+  },
+  inputGroup: {
+    marginBottom: 15,
+  },
+  inputLabel: {
+    fontSize: 16,
+    marginBottom: 5,
+    color: '#333',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    padding: 10,
+    fontSize: 16,
+    backgroundColor: '#f9f9f9',
   },
 }); 

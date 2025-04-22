@@ -162,6 +162,102 @@ export const customerService = {
       throw error;
     }
   },
+
+  /**
+   * Update an existing customer
+   * @param {number} id - Customer ID
+   * @param {Object} customerData - Customer data to update
+   * @returns {Promise<Object>} - Response from the API
+   */
+  updateCustomer: async (id, customerData) => {
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/v1/Customer/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(customerData),
+      });
+
+      // Check if the response has content before parsing JSON
+      const responseText = await response.text();
+      let data = null;
+      if (responseText) {
+        try {
+          data = JSON.parse(responseText);
+        } catch (parseError) {
+          // Handle cases where response is not JSON but still indicates success (e.g., 204 No Content)
+          if (!response.ok) {
+            console.error('Error parsing update response:', parseError);
+            throw new Error('Failed to parse server response.');
+          }
+          // If response is OK but not JSON (like 204), return success indicator
+          return { success: true }; 
+        }
+      } else if (!response.ok) {
+         // If response is empty and not OK, throw error
+         throw new Error('Failed to update customer with status: ' + response.status);
+      }
+
+
+      if (!response.ok) {
+        throw new Error(data?.message || 'Failed to update customer');
+      }
+
+      // Return the parsed data or a success indicator if no content
+      return data || { success: true };
+    } catch (error) {
+      console.error('Error updating customer:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete a customer
+   * @param {number} id - Customer ID
+   * @returns {Promise<Object>} - Response from the API (likely empty on success)
+   */
+  deleteCustomer: async (id) => {
+    try {
+      const token = await getAuthToken();
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      
+      console.log(`[customerService.deleteCustomer] Attempting fetch DELETE for ID: ${id}`); // Log: Before fetch
+
+      const response = await fetch(`${API_BASE_URL}/v1/Customer/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      // DELETE often returns 204 No Content on success
+      if (!response.ok && response.status !== 204) {
+         // Try to parse error message if available
+         let errorMessage = 'Failed to delete customer';
+         try {
+           const errorData = await response.json();
+           errorMessage = errorData.message || errorMessage;
+         } catch (e) {
+           // Ignore parsing error if body is empty or not JSON
+         }
+         throw new Error(errorMessage);
+      }
+
+      return { success: true }; // Indicate success
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      throw error;
+    }
+  },
 };
 
 /**
