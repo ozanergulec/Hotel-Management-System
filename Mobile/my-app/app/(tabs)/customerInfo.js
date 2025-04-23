@@ -180,41 +180,25 @@ export default function CustomerInfoScreen() {
   const handleDeleteCustomer = async (customerId) => {
     if (!customerId) return;
 
-    Alert.alert(
-      "Confirm Delete",
-      "Are you sure you want to delete this customer?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel"
-        },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            console.log(`[handleDeleteCustomer] Delete confirmed for ID: ${customerId}`);
-            setIsDeleting(true);
-            try {
-              console.log(`[handleDeleteCustomer] Calling customerService.deleteCustomer...`);
-              await customerService.deleteCustomer(customerId);
-              console.log(`[handleDeleteCustomer] customerService.deleteCustomer finished.`);
-              Alert.alert("Success", "Customer deleted successfully.");
-              
-              setCustomers(prev => prev.filter(c => c.id !== customerId));
-              setFilteredCustomers(prev => prev.filter(c => c.id !== customerId));
-              
-              setDetailModalVisible(false);
-              setSelectedCustomer(null);
-            } catch (error) {
-              console.error('Error deleting customer:', error);
-              Alert.alert("Error", error.message || "Failed to delete customer.");
-            } finally {
-              setIsDeleting(false);
-            }
-          }
-        }
-      ]
-    );
+    console.log(`[handleDeleteCustomer] Attempting direct delete for ID: ${customerId}`);
+    setIsDeleting(true);
+    try {
+      console.log(`[handleDeleteCustomer] Calling customerService.deleteCustomer...`);
+      await customerService.deleteCustomer(customerId);
+      console.log(`[handleDeleteCustomer] customerService.deleteCustomer finished.`);
+      Alert.alert("Success", "Customer deleted successfully.");
+      
+      setCustomers(prev => prev.filter(c => c.id !== customerId));
+      setFilteredCustomers(prev => prev.filter(c => c.id !== customerId));
+      
+      setDetailModalVisible(false);
+      setSelectedCustomer(null);
+    } catch (error) {
+      console.error('Error deleting customer:', error);
+      Alert.alert("Error", error.message || "Failed to delete customer.");
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleUpdateCustomer = async () => {
