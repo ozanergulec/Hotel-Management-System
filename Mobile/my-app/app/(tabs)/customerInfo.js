@@ -142,14 +142,39 @@ export default function CustomerInfoScreen() {
     return customer?.FullName || 'Unknown';
   };
 
-  const viewCustomerDetails = (customer) => {
-    setSelectedCustomer(customer);
-    setEditingCustomerData({ 
-        ...customer, 
-        FullName: getFullName(customer)
-    }); 
-    setIsEditing(false);
-    setDetailModalVisible(true);
+  const viewCustomerDetails = async (customer) => {
+    try {
+      setIsEditing(false);
+      setDetailModalVisible(true);
+      setSelectedCustomer(customer); // Set initial data from list to show something immediately
+      
+      // Fetch detailed customer information
+      const detailedCustomer = await customerService.getCustomerById(customer.id);
+      console.log('Detailed customer data:', detailedCustomer);
+      
+      // Map the detailed data to our format
+      const mappedDetailedCustomer = {
+        ...detailedCustomer,
+        id: detailedCustomer.id,
+        FullName: detailedCustomer.fullName || 'Unknown',
+        Phone: detailedCustomer.phone || 'No phone',
+        Email: detailedCustomer.email || 'No email',
+        Address: detailedCustomer.address || 'No address provided',
+        Status: detailedCustomer.status || 'Standart',
+        reservations: detailedCustomer.reservations || [],
+        nationality: detailedCustomer.nationality,
+        idNumber: detailedCustomer.idNumber,
+        notes: detailedCustomer.notes,
+        birthDate: detailedCustomer.birthDate
+      };
+      
+      // Update state with detailed data
+      setSelectedCustomer(mappedDetailedCustomer);
+      setEditingCustomerData(mappedDetailedCustomer);
+    } catch (error) {
+      console.error('Error fetching customer details:', error);
+      Alert.alert("Error", "Failed to load customer details. Please try again.");
+    }
   };
 
   const handleDeleteCustomer = async (customerId) => {
@@ -215,12 +240,12 @@ export default function CustomerInfoScreen() {
         lastName: lastName,
         email: editingCustomerData.Email,
         phone: editingCustomerData.Phone,
-        address: editingCustomerData.Address, 
+        address: editingCustomerData.Address || '', 
         status: editingCustomerData.Status,
-        nationality: selectedCustomer?.nationality || '',
-        idNumber: selectedCustomer?.idNumber || '',
-        notes: selectedCustomer?.notes || '',
-        birthDate: selectedCustomer?.birthDate || new Date().toISOString(),
+        nationality: editingCustomerData.nationality || '',
+        idNumber: editingCustomerData.idNumber || '',
+        notes: editingCustomerData.notes || '',
+        birthDate: editingCustomerData.birthDate || new Date().toISOString(),
       };
 
       await customerService.updateCustomer(editingCustomerData.id, payload);
@@ -392,6 +417,17 @@ export default function CustomerInfoScreen() {
     const customerAddress = displayData.Address || (isEditing ? '' : 'No address provided');
     const customerStatus = displayData.Status || 'Standart';
     const isVip = customerStatus === 'VIP';
+    
+    // Format date to be more readable if exists
+    const formatDate = (dateString) => {
+      if (!dateString) return '';
+      try {
+        const date = new Date(dateString);
+        return date.toLocaleDateString();
+      } catch (e) {
+        return dateString;
+      }
+    };
 
     return (
       <Modal
@@ -484,6 +520,63 @@ export default function CustomerInfoScreen() {
                     />
                   ) : (
                     <Text style={styles.detailText}>{customerAddress}</Text>
+                  )}
+                </View>
+              </View>
+              
+              <View style={styles.detailSection}>
+                <Text style={styles.sectionTitle}>Personal Information</Text>
+                <View style={styles.detailItem}>
+                  <MaterialIcons name="flag" size={20} color="#666" />
+                  {isEditing ? (
+                    <TextInput 
+                      style={[styles.detailText, styles.editInput]} 
+                      value={displayData.nationality || ''} 
+                      onChangeText={(text) => handleEditInputChange('nationality', text)}
+                      placeholder="Nationality"
+                    />
+                  ) : (
+                    <Text style={styles.detailText}>Nationality: {displayData.nationality || 'Not provided'}</Text>
+                  )}
+                </View>
+                <View style={styles.detailItem}>
+                  <MaterialIcons name="credit-card" size={20} color="#666" />
+                  {isEditing ? (
+                    <TextInput 
+                      style={[styles.detailText, styles.editInput]} 
+                      value={displayData.idNumber || ''} 
+                      onChangeText={(text) => handleEditInputChange('idNumber', text)}
+                      placeholder="ID Number"
+                    />
+                  ) : (
+                    <Text style={styles.detailText}>ID Number: {displayData.idNumber || 'Not provided'}</Text>
+                  )}
+                </View>
+                <View style={styles.detailItem}>
+                  <MaterialIcons name="cake" size={20} color="#666" />
+                  {isEditing ? (
+                    <TextInput 
+                      style={[styles.detailText, styles.editInput]} 
+                      value={displayData.birthDate ? formatDate(displayData.birthDate) : ''} 
+                      onChangeText={(text) => handleEditInputChange('birthDate', text)}
+                      placeholder="Birth Date (YYYY-MM-DD)"
+                    />
+                  ) : (
+                    <Text style={styles.detailText}>Birth Date: {displayData.birthDate ? formatDate(displayData.birthDate) : 'Not provided'}</Text>
+                  )}
+                </View>
+                <View style={styles.detailItem}>
+                  <MaterialIcons name="note" size={20} color="#666" />
+                  {isEditing ? (
+                    <TextInput 
+                      style={[styles.detailText, styles.editInput, { height: 80 }]} 
+                      value={displayData.notes || ''} 
+                      onChangeText={(text) => handleEditInputChange('notes', text)}
+                      placeholder="Notes"
+                      multiline
+                    />
+                  ) : (
+                    <Text style={styles.detailText}>Notes: {displayData.notes || 'No notes'}</Text>
                   )}
                 </View>
               </View>

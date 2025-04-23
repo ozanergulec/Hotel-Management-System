@@ -230,29 +230,33 @@ export const customerService = {
         throw new Error('Authentication required');
       }
       
-      console.log(`[customerService.deleteCustomer] Attempting fetch DELETE for ID: ${id}`); // Log: Before fetch
+      console.log(`[customerService.deleteCustomer] Attempting fetch DELETE for ID: ${id}`);
 
       const response = await fetch(`${API_BASE_URL}/v1/Customer/${id}`, {
         method: 'DELETE',
         headers: {
+          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
       });
 
+      console.log(`[customerService.deleteCustomer] Response status: ${response.status}`);
+      
       // DELETE often returns 204 No Content on success
-      if (!response.ok && response.status !== 204) {
-         // Try to parse error message if available
-         let errorMessage = 'Failed to delete customer';
-         try {
-           const errorData = await response.json();
-           errorMessage = errorData.message || errorMessage;
-         } catch (e) {
-           // Ignore parsing error if body is empty or not JSON
-         }
-         throw new Error(errorMessage);
+      if (response.ok || response.status === 204) {
+        return { success: true }; // Indicate success
       }
-
-      return { success: true }; // Indicate success
+      
+      // Try to parse error message if available
+      let errorMessage = 'Failed to delete customer';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        // Ignore parsing error if body is empty or not JSON
+        console.error('Error parsing delete response:', e);
+      }
+      throw new Error(errorMessage);
     } catch (error) {
       console.error('Error deleting customer:', error);
       throw error;
