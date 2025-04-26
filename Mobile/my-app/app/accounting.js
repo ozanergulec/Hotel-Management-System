@@ -719,61 +719,43 @@ export default function AccountingScreen() {
   
   const handleDeleteItem = async (item) => {
     hideActionMenu();
+    setLoading(true);
     
-    Alert.alert(
-      "Confirm Deletion",
-      `Are you sure you want to delete this ${activeTab === 'incomes' ? 'income' : 'expense'}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        { 
-          text: "Delete", 
-          style: "destructive",
-          onPress: async () => {
-            setLoading(true);
-            try {
-              console.log(`Attempting to delete ${activeTab === 'incomes' ? 'income' : 'expense'} with ID: ${item.id}`);
-              
-              if (activeTab === 'incomes') {
-                const result = await accountingService.deleteIncome(item.id);
-                console.log('Delete income API response:', result);
-                
-                // Use the returned ID to filter out the deleted item
-                const deletedId = result.id || item.id;
-                setIncomes(incomes.filter(income => income.id !== deletedId));
-                
-                // Update summary
-                if (isToday(new Date(item.date))) {
-                  setDailyIncome(prev => prev - parseFloat(item.amount));
-                }
-                setWeeklyIncome(prev => prev - parseFloat(item.amount));
-                
-                Alert.alert("Success", "Income deleted successfully");
-              } else {
-                const result = await accountingService.deleteExpense(item.id);
-                console.log('Delete expense API response:', result);
-                
-                // Use the returned ID to filter out the deleted item
-                const deletedId = result.id || item.id;
-                setExpenses(expenses.filter(expense => expense.id !== deletedId));
-                
-                // Update summary
-                if (isToday(new Date(item.date))) {
-                  setDailyExpense(prev => prev - parseFloat(item.amount));
-                }
-                setWeeklyExpense(prev => prev - parseFloat(item.amount));
-                
-                Alert.alert("Success", "Expense deleted successfully");
-              }
-            } catch (error) {
-              console.error(`Error deleting ${activeTab === 'incomes' ? 'income' : 'expense'}:`, error);
-              Alert.alert("Error", `Failed to delete ${activeTab === 'incomes' ? 'income' : 'expense'}: ${error.message}`);
-            } finally {
-              setLoading(false);
-            }
-          }
+    try {
+      console.log(`Attempting to delete ${activeTab === 'incomes' ? 'income' : 'expense'} with ID: ${item.id}`);
+      
+      if (activeTab === 'incomes') {
+        const result = await accountingService.deleteIncome(item.id);
+        console.log('Delete income API response:', result);
+        
+        // Use the returned ID to filter out the deleted item
+        const deletedId = result.id || item.id;
+        setIncomes(incomes.filter(income => income.id !== deletedId));
+        
+        // Update summary
+        if (isToday(new Date(item.date))) {
+          setDailyIncome(prev => prev - parseFloat(item.amount));
         }
-      ]
-    );
+        setWeeklyIncome(prev => prev - parseFloat(item.amount));
+      } else {
+        const result = await accountingService.deleteExpense(item.id);
+        console.log('Delete expense API response:', result);
+        
+        // Use the returned ID to filter out the deleted item
+        const deletedId = result.id || item.id;
+        setExpenses(expenses.filter(expense => expense.id !== deletedId));
+        
+        // Update summary
+        if (isToday(new Date(item.date))) {
+          setDailyExpense(prev => prev - parseFloat(item.amount));
+        }
+        setWeeklyExpense(prev => prev - parseFloat(item.amount));
+      }
+    } catch (error) {
+      console.error(`Error deleting ${activeTab === 'incomes' ? 'income' : 'expense'}:`, error);
+    } finally {
+      setLoading(false);
+    }
   };
   
   const handleIncomeUpdate = async () => {
