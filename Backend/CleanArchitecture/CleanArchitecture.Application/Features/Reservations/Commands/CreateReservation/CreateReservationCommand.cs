@@ -8,11 +8,12 @@ using System;
 using System.ComponentModel.DataAnnotations;
 using System.Threading;
 using System.Threading.Tasks;
+using CleanArchitecture.Core.Features.Reservations.DTOs;
 using ValidationException = CleanArchitecture.Core.Exceptions.ValidationException;
 
 namespace CleanArchitecture.Core.Features.Reservations.Commands.CreateReservation
 {
-    public class CreateReservationCommand : IRequest<int>
+    public class CreateReservationCommand : IRequest<CreateReservationResponse>
     {
         [Required(ErrorMessage = "Müşteri kimlik numarası gereklidir.")]
         public string CustomerIdNumber { get; set; } // Use ID number to find customer
@@ -21,11 +22,11 @@ namespace CleanArchitecture.Core.Features.Reservations.Commands.CreateReservatio
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public int NumberOfGuests { get; set; }
-        public decimal Price { get; set; }
+        
         // Status default "Pending" olacak, command'da belirtmeye gerek yok.
     }
 
-    public class CreateReservationCommandHandler : IRequestHandler<CreateReservationCommand, int>
+    public class CreateReservationCommandHandler : IRequestHandler<CreateReservationCommand, CreateReservationResponse>
     {
         private readonly IReservationRepositoryAsync _reservationRepository;
         private readonly ICustomerRepositoryAsync _customerRepository;
@@ -44,30 +45,27 @@ namespace CleanArchitecture.Core.Features.Reservations.Commands.CreateReservatio
             _mapper = mapper;
         }
 
-        public async Task<int> Handle(CreateReservationCommand request, CancellationToken cancellationToken)
+        // Metodun dönüş tipi Task<int> yerine Task<CreateReservationResponse> olarak değiştirildi
+        public async Task<CreateReservationResponse> Handle(CreateReservationCommand request, CancellationToken cancellationToken)
         {
-            // Müşteriyi ID numarasına göre bul
+            // --- Müşteri, Oda bulma ve kontroller (önceki adımla aynı) ---
             var customer = await _customerRepository.GetByIdNumberAsync(request.CustomerIdNumber);
             if (customer == null)
             {
-                // Veya EntityNotFoundException da olabilir
                 throw new ValidationException($"Customer with ID number '{request.CustomerIdNumber}' not found. Please create the customer first.");
             }
 
-            // Odayı bul
             var room = await _roomRepository.GetByIdAsync(request.RoomId);
             if (room == null)
             {
                 throw new EntityNotFoundException("Room", request.RoomId);
             }
 
-            // Oda bakımda mı kontrolü
             if (room.IsOnMaintenance)
             {
                  throw new ValidationException("Cannot make a reservation for a room that is under maintenance.");
             }
 
-            // Seçilen tarihlerde oda müsait mi?
             var isAvailable = await _reservationRepository.IsRoomAvailableAsync(
                 request.RoomId, request.StartDate, request.EndDate);
 
@@ -75,15 +73,39 @@ namespace CleanArchitecture.Core.Features.Reservations.Commands.CreateReservatio
             {
                 throw new ValidationException("The selected room is not available for the specified date range.");
             }
+            // --- Kontroller Sonu ---
+
 
             // Rezervasyonu oluştur
             var reservation = _mapper.Map<Reservation>(request);
-            reservation.CustomerId = customer.Id; // Müşteri ID'sini ata
-            reservation.Status = "Pending"; // Durumu Pending olarak ayarla
+            reservation.CustomerId = customer.Id;
+            reservation.Status = "Pending";
 
+            // Fiyat Hesaplama (önceki adımla aynı)
+            var startDateOnly = request.StartDate.Date;
+            var endDateOnly = request.EndDate.Date;
+            if (endDateOnly <= startDateOnly)
+            {
+                throw new ValidationException("End date must be after the start date.");
+            }
+            int numberOfNights = (int)(endDateOnly - startDateOnly).TotalDays;
+            if (numberOfNights <= 0)
+            {
+                 throw new ValidationException("Reservation must be for at least one night.");
+            }
+            reservation.Price = room.PricePerNight * numberOfNights;
+            // Fiyat Hesaplama Sonu
+
+
+            // Rezervasyonu kaydet
             await _reservationRepository.AddAsync(reservation);
 
-            return reservation.Id;
+            // <<< DEĞİŞİKLİK: Sadece ID yerine ID ve Fiyat içeren nesneyi döndür >>>
+            return new CreateReservationResponse
+            {
+                Id = reservation.Id,
+                CalculatedPrice = reservation.Price // Hesaplanan fiyatı ekle
+            };
         }
     }
 }
