@@ -265,6 +265,257 @@ export const customerService = {
 };
 
 /**
+ * Accounting service to interact with the backend
+ */
+export const accountingService = {
+  // Income methods
+  getIncomes: async (pageNumber = 1, pageSize = 10, startDate = null, endDate = null, customerName = null) => {
+    try {
+      const token = await getAuthToken();
+      
+      let url = `${API_BASE_URL}/v1/Accounting/incomes?PageNumber=${pageNumber}&PageSize=${pageSize}&version=1`;
+      
+      if (startDate) url += `&StartDate=${startDate}`;
+      if (endDate) url += `&EndDate=${endDate}`;
+      if (customerName) url += `&CustomerName=${encodeURIComponent(customerName)}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+      });
+
+      const data = await response.json();
+      console.log('Income API response:', data);
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch incomes');
+      }
+
+      return data; // Return the complete response object including data array
+    } catch (error) {
+      console.error('Error fetching incomes:', error);
+      throw error;
+    }
+  },
+
+  addIncome: async (incomeData) => {
+    try {
+      const token = await getAuthToken();
+      
+      const response = await fetch(`${API_BASE_URL}/v1/Accounting/incomes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        body: JSON.stringify(incomeData),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to add income');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error adding income:', error);
+      throw error;
+    }
+  },
+
+  updateIncome: async (id, incomeData) => {
+    try {
+      const token = await getAuthToken();
+      
+      const response = await fetch(`${API_BASE_URL}/v1/Accounting/incomes/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        body: JSON.stringify({ ...incomeData, id }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to update income');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error updating income:', error);
+      throw error;
+    }
+  },
+
+  deleteIncome: async (id) => {
+    try {
+      const token = await getAuthToken();
+      
+      const response = await fetch(`${API_BASE_URL}/v1/Accounting/incomes/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Delete income response:', data);
+        return { success: true, id: data.id };
+      }
+      
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to delete income');
+    } catch (error) {
+      console.error('Error deleting income:', error);
+      throw error;
+    }
+  },
+
+  // Expense methods
+  getExpenses: async (pageNumber = 1, pageSize = 10, startDate = null, endDate = null, category = null) => {
+    try {
+      const token = await getAuthToken();
+      
+      let url = `${API_BASE_URL}/v1/Accounting/expenses?PageNumber=${pageNumber}&PageSize=${pageSize}&version=1`;
+      
+      if (startDate) url += `&StartDate=${startDate}`;
+      if (endDate) url += `&EndDate=${endDate}`;
+      if (category) url += `&Category=${encodeURIComponent(category)}`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+      });
+
+      const data = await response.json();
+      console.log('Expense API response:', data);
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch expenses');
+      }
+
+      return data; // Return the complete response object including data array
+    } catch (error) {
+      console.error('Error fetching expenses:', error);
+      throw error;
+    }
+  },
+
+  addExpense: async (expenseData) => {
+    try {
+      const token = await getAuthToken();
+      
+      const response = await fetch(`${API_BASE_URL}/v1/Accounting/expenses`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        body: JSON.stringify(expenseData),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to add expense');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error adding expense:', error);
+      throw error;
+    }
+  },
+
+  updateExpense: async (id, expenseData) => {
+    try {
+      const token = await getAuthToken();
+      
+      const response = await fetch(`${API_BASE_URL}/v1/Accounting/expenses/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+        body: JSON.stringify({ ...expenseData, id }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to update expense');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error updating expense:', error);
+      throw error;
+    }
+  },
+
+  deleteExpense: async (id) => {
+    try {
+      const token = await getAuthToken();
+      
+      const response = await fetch(`${API_BASE_URL}/v1/Accounting/expenses/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Delete expense response:', data);
+        return { success: true, id: data.id };
+      }
+      
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to delete expense');
+    } catch (error) {
+      console.error('Error deleting expense:', error);
+      throw error;
+    }
+  },
+
+  // Transaction summary
+  getTransactionSummary: async (date = null) => {
+    try {
+      const token = await getAuthToken();
+      
+      let url = `${API_BASE_URL}/v1/Accounting/transactions/summary`;
+      if (date) url += `?date=${date}&version=1`;
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': token ? `Bearer ${token}` : '',
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch transaction summary');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error fetching transaction summary:', error);
+      throw error;
+    }
+  },
+};
+
+/**
  * Helper function to get the auth token from AsyncStorage
  */
 const getAuthToken = async () => {
