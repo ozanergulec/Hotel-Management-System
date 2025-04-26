@@ -66,10 +66,23 @@ export default function AccountingScreen() {
   const [itemToEdit, setItemToEdit] = useState(null);
   
   useEffect(() => {
-    fetchIncomes();
-    fetchExpenses();
-    fetchTransactionSummary();
+    loadAllData();
   }, []);
+  
+  const loadAllData = async () => {
+    setLoading(true);
+    try {
+      await Promise.all([
+        fetchIncomes(),
+        fetchExpenses(),
+        fetchTransactionSummary()
+      ]);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   
   const fetchIncomes = async () => {
     try {
@@ -158,23 +171,23 @@ export default function AccountingScreen() {
   const fetchTransactionSummary = async () => {
     try {
       const today = formatISO(startOfDay(new Date())).split('T')[0];
-      try {
-        const summary = await accountingService.getTransactionSummary(today);
-        if (summary) {
-          // Set daily stats
-          setDailyIncome(summary.dailyIncome || 2400);
-          setDailyExpense(summary.dailyExpense || 3000);
-          
-          // Set weekly stats
-          setWeeklyIncome(summary.weeklyIncome || 2400);
-          setWeeklyExpense(summary.weeklyExpense || 3000);
-        }
-      } catch (error) {
-        console.log('Using default summary values due to error:', error);
-        // Keep default values
+      console.log('Fetching transaction summary for date:', today);
+      
+      const summary = await accountingService.getTransactionSummary(today);
+      console.log('Transaction summary received:', summary);
+      
+      if (summary) {
+        // Set daily stats with proper values from API
+        setDailyIncome(summary.dailyIncome || 0);
+        setDailyExpense(summary.dailyExpense || 0);
+        
+        // Set weekly stats with proper values from API
+        setWeeklyIncome(summary.weeklyIncome || 0);
+        setWeeklyExpense(summary.weeklyExpense || 0);
       }
     } catch (error) {
-      console.error('Error in transaction summary:', error);
+      console.error('Error fetching transaction summary:', error);
+      // Keep existing values if there's an error
     }
   };
   
@@ -783,6 +796,9 @@ export default function AccountingScreen() {
         income.id === itemToEdit.id ? formattedData : income
       ));
       
+      // Refresh transaction summary data
+      await fetchTransactionSummary();
+      
       // Reset form and close modal
       setIncomeForm({
         incomeNumber: '',
@@ -830,6 +846,9 @@ export default function AccountingScreen() {
         expense.id === itemToEdit.id ? formattedData : expense
       ));
       
+      // Refresh transaction summary data
+      await fetchTransactionSummary();
+      
       // Reset form and close modal
       setExpenseForm({
         expenseNumber: '',
@@ -874,8 +893,8 @@ export default function AccountingScreen() {
   
   return (
     <SafeAreaView style={styles.container}>
-      <Stack.Screen 
-        options={{
+      <Stack
+        screenOptions={{
           headerShown: true,
           title: "Accounting",
           headerStyle: {
@@ -885,13 +904,13 @@ export default function AccountingScreen() {
           headerShadowVisible: false,
           headerLeft: () => (
             <TouchableOpacity 
-              style={{marginLeft: 10}} 
-              onPress={() => router.back()}
+              onPress={() => router.replace('/dashboard')} 
+              style={{ marginLeft: 10 }}
             >
               <MaterialIcons name="arrow-back" size={24} color="#333" />
             </TouchableOpacity>
           ),
-        }} 
+        }}
       />
       
       <View style={styles.mainContainer}>
@@ -899,25 +918,25 @@ export default function AccountingScreen() {
         <View style={styles.summaryContainer}>
           <View style={styles.summaryCard}>
             <Text style={styles.summaryTitle}>Daily Income</Text>
-            <Text style={[styles.summaryAmount, styles.incomeAmount]}>₺{dailyIncome},00</Text>
+            <Text style={[styles.summaryAmount, styles.incomeAmount]}>₺{dailyIncome.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</Text>
             <Text style={styles.summaryDate}>{format(currentDate, 'dd.MM.yyyy')}</Text>
           </View>
           
           <View style={styles.summaryCard}>
             <Text style={styles.summaryTitle}>Daily Expense</Text>
-            <Text style={[styles.summaryAmount, styles.expenseAmount]}>₺{dailyExpense},00</Text>
+            <Text style={[styles.summaryAmount, styles.expenseAmount]}>₺{dailyExpense.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</Text>
             <Text style={styles.summaryDate}>{format(currentDate, 'dd.MM.yyyy')}</Text>
           </View>
           
           <View style={styles.summaryCard}>
             <Text style={styles.summaryTitle}>Weekly Income</Text>
-            <Text style={[styles.summaryAmount, styles.incomeAmount]}>₺{weeklyIncome},00</Text>
+            <Text style={[styles.summaryAmount, styles.incomeAmount]}>₺{weeklyIncome.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</Text>
             <Text style={styles.summaryDate}>Last 7 days</Text>
           </View>
           
           <View style={styles.summaryCard}>
             <Text style={styles.summaryTitle}>Weekly Expense</Text>
-            <Text style={[styles.summaryAmount, styles.expenseAmount]}>₺{weeklyExpense},00</Text>
+            <Text style={[styles.summaryAmount, styles.expenseAmount]}>₺{weeklyExpense.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</Text>
             <Text style={styles.summaryDate}>Last 7 days</Text>
           </View>
         </View>
