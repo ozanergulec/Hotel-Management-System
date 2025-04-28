@@ -1,34 +1,33 @@
-﻿// File: Backend/CleanArchitecture/CleanArchitecture.Application/Features/Rooms/Queries/GetRoomById/GetRoomByIdQuery.cs
-using System;
+﻿using System;
 using AutoMapper;
 using CleanArchitecture.Core.Entities;
 using CleanArchitecture.Core.Exceptions;
-using CleanArchitecture.Core.Interfaces.Repositories; // Kullanılmıyor, kaldırılabilir
 using MediatR;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using CleanArchitecture.Application.Interfaces; // IApplicationDbContext, IDateTimeService için
-using CleanArchitecture.Core.Interfaces; // IDateTimeService için
+using CleanArchitecture.Application.Interfaces;
+using CleanArchitecture.Core.Interfaces;
 using Microsoft.EntityFrameworkCore;
+
+// ViewModel namespace'ini ekleyin (eğer farklı bir yerdeyse)
+using CleanArchitecture.Core.Features.Rooms.Queries.GetRoomById;
 
 namespace CleanArchitecture.Core.Features.Rooms.Queries.GetRoomById
 {
-    // Query Sınıfı (Değişiklik yok)
     public class GetRoomByIdQuery : IRequest<GetRoomByIdViewModel>
     {
         public int Id { get; set; }
-        public DateTime? StatusCheckDate { get; set; } // Saat bilgisi içerebilir veya null olabilir
+        public DateTime? StatusCheckDate { get; set; }
     }
 
-    // Query Handler Sınıfı (Güncellendi)
     public class GetRoomByIdQueryHandler : IRequestHandler<GetRoomByIdQuery, GetRoomByIdViewModel>
     {
         private readonly IApplicationDbContext _context;
         private readonly IMapper _mapper;
         private readonly IDateTimeService _dateTimeService;
-        private static readonly TimeSpan DefaultCheckTime = new TimeSpan(16, 0, 0); // Varsayılan saat 16:00
+        private static readonly TimeSpan DefaultCheckTime = new TimeSpan(16, 0, 0);
 
         public GetRoomByIdQueryHandler(
             IApplicationDbContext context,
@@ -42,35 +41,30 @@ namespace CleanArchitecture.Core.Features.Rooms.Queries.GetRoomById
 
         public async Task<GetRoomByIdViewModel> Handle(GetRoomByIdQuery request, CancellationToken cancellationToken)
         {
-            // <<<< BAŞLANGIÇ: Check DateTime Belirleme (GetAllRooms ile aynı mantık) >>>>
-            DateTime checkDateTime;
-
+            // --- checkDateTime HESAPLAMASI (Metodun başında) ---
+            DateTime checkDateTime; // Durum hesaplaması için kullanılacak ZAMAN
             if (request.StatusCheckDate.HasValue)
             {
                 var requestedDate = request.StatusCheckDate.Value;
-                if (requestedDate.TimeOfDay == TimeSpan.Zero)
-                {
-                    checkDateTime = requestedDate.Date + DefaultCheckTime;
-                }
-                else
-                {
-                    checkDateTime = requestedDate;
-                }
+                checkDateTime = (requestedDate.TimeOfDay == TimeSpan.Zero)
+                    ? requestedDate.Date + DefaultCheckTime
+                    : requestedDate;
 
-                if (checkDateTime.Kind == DateTimeKind.Unspecified)
-                {
-                     checkDateTime = checkDateTime.ToUniversalTime();
-                }
-                else if (checkDateTime.Kind == DateTimeKind.Local)
-                {
-                    checkDateTime = checkDateTime.ToUniversalTime();
-                }
+                if (checkDateTime.Kind == DateTimeKind.Unspecified) checkDateTime = DateTime.SpecifyKind(checkDateTime, DateTimeKind.Utc);
+                else if (checkDateTime.Kind == DateTimeKind.Local) checkDateTime = checkDateTime.ToUniversalTime();
             }
             else
             {
                 checkDateTime = _dateTimeService.NowUtc;
             }
-            // <<<< BİTİŞ: Check DateTime Belirleme >>>>
+            // --- checkDateTime HESAPLAMASI SONU ---
+
+            // --- Yanıtta gösterilecek zaman (Her zaman 13:00 UTC) ---
+            DateTime responseStatusCheckDate = DateTime.SpecifyKind(
+                _dateTimeService.NowUtc.Date + new TimeSpan(19, 0, 0),
+                DateTimeKind.Utc
+            );
+            // --- Yanıtta gösterilecek zaman SONU ---
 
             var room = await _context.Rooms
                 .Include(r => r.Amenities)
@@ -89,40 +83,26 @@ namespace CleanArchitecture.Core.Features.Rooms.Queries.GetRoomById
             roomViewModel.Features = room.Amenities?.Select(a => a.Name).ToList() ?? new List<string>();
             roomViewModel.MaintenanceDetails = _mapper.Map<List<MaintenanceIssueViewModel>>(room.MaintenanceIssues) ?? new List<MaintenanceIssueViewModel>();
 
-            // <<< DEĞİŞİKLİK: Güncellenmiş Calculate metodunu çağır >>>
+            // *** DÜZELTME: Metodun başında hesaplanan 'checkDateTime' kullanılır ***
             roomViewModel.ComputedStatus = CalculateRoomStatus(room, checkDateTime);
-            // <<< DEĞİŞİKLİK: Yanıta `.Date` değil, kullanılan checkDateTime'ı ata >>>
-            roomViewModel.StatusCheckDate = checkDateTime;
+
+            // *** DÜZELTME: Yanıtta gösterilecek zaman atanır ***
+            roomViewModel.StatusCheckDate = responseStatusCheckDate;
 
             return roomViewModel;
         }
 
-         // <<< BAŞLANGIÇ: Güncellenmiş CalculateRoomStatus Metodu (GetAllRooms ile aynı) >>>
-        // Not: Bu metodu ortak bir yerde tanımlamak (örn. bir servis sınıfı) daha iyi olabilir.
+        // CalculateRoomStatus metodu (değişiklik yok)
         private string CalculateRoomStatus(Room room, DateTime checkDateTime)
         {
-             if (room.IsOnMaintenance)
-            {
-                return "Maintenance";
-            }
+             if (room.IsOnMaintenance) return "Maintenance";
 
-            var conflictingReservation = room.Reservations
+             var conflictingReservation = room.Reservations?
                 .FirstOrDefault(res =>
-                    (res.Status == "Pending" || res.Status == "Checked-in") &&
                     checkDateTime >= res.StartDate &&
                     checkDateTime < res.EndDate);
 
-             if (conflictingReservation != null)
-             {
-                 if (conflictingReservation.Status == "Checked-in")
-                 {
-                     return "Occupied";
-                 }
-                 return "Occupied"; // Veya "Reserved"
-             }
-
-             return "Available";
+             return (conflictingReservation != null) ? "Occupied" : "Available";
         }
-         // <<< BİTİŞ: Güncellenmiş CalculateRoomStatus Metodu >>>
     }
 }

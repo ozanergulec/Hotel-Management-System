@@ -1,21 +1,20 @@
 ﻿// File: Backend/CleanArchitecture/CleanArchitecture.Application/Features/Rooms/Queries/GetAllRooms/GetAllRoomsQuery.cs
 using System;
 using AutoMapper;
-using CleanArchitecture.Core.Interfaces.Repositories; // IRoomRepositoryAsync için
+using CleanArchitecture.Core.Interfaces.Repositories;
 using CleanArchitecture.Core.Wrappers;
 using MediatR;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using CleanArchitecture.Application.Interfaces; // IApplicationDbContext, IDateTimeService için
+using CleanArchitecture.Application.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using CleanArchitecture.Core.Entities;
 using CleanArchitecture.Core.Interfaces;
 
 namespace CleanArchitecture.Core.Features.Rooms.Queries.GetAllRooms
 {
-    // Query Sınıfı (Değişiklik yok)
     public class GetAllRoomsQuery : IRequest<PagedResponse<GetAllRoomsViewModel>>
     {
         public int PageNumber { get; set; } = 1;
@@ -25,16 +24,15 @@ namespace CleanArchitecture.Core.Features.Rooms.Queries.GetAllRooms
         public bool? IsOnMaintenance { get; set; }
         public DateTime? AvailabilityStartDate { get; set; }
         public DateTime? AvailabilityEndDate { get; set; }
-        public DateTime? StatusCheckDate { get; set; } // Saat bilgisi içerebilir veya null olabilir
+        public DateTime? StatusCheckDate { get; set; }
     }
 
-    // Query Handler Sınıfı (Güncellendi)
     public class GetAllRoomsQueryHandler : IRequestHandler<GetAllRoomsQuery, PagedResponse<GetAllRoomsViewModel>>
     {
         private readonly IApplicationDbContext _context;
         private readonly IMapper _mapper;
         private readonly IDateTimeService _dateTimeService;
-        private static readonly TimeSpan DefaultCheckTime = new TimeSpan(16, 0, 0); // Varsayılan saat 16:00
+        private static readonly TimeSpan DefaultCheckTime = new TimeSpan(16, 0, 0);
 
         public GetAllRoomsQueryHandler(
             IApplicationDbContext context,
@@ -48,102 +46,54 @@ namespace CleanArchitecture.Core.Features.Rooms.Queries.GetAllRooms
 
         public async Task<PagedResponse<GetAllRoomsViewModel>> Handle(GetAllRoomsQuery request, CancellationToken cancellationToken)
         {
-            // <<<< BAŞLANGIÇ: Check DateTime Belirleme (16:00 Varsayılanı ile) >>>>
-            DateTime checkDateTime; // Kontrol edilecek kesin zamanı tutacak
-
+            // --- checkDateTime HESAPLAMASI (Metodun başında) ---
+            DateTime checkDateTime; // Durum hesaplaması için kullanılacak ZAMAN
             if (request.StatusCheckDate.HasValue)
             {
                 var requestedDate = request.StatusCheckDate.Value;
-                // ASP.NET Core model binding genellikle gelen string'i DateTime'a çevirir.
-                // Eğer saat bilgisi yoksa (örn. sadece "2025-04-26" geldiyse), TimeOfDay 00:00:00 olur.
-                if (requestedDate.TimeOfDay == TimeSpan.Zero)
-                {
-                    // Saat girilmemişse, tarihin üzerine varsayılan saati (16:00) ekle
-                    checkDateTime = requestedDate.Date + DefaultCheckTime;
-                }
-                else
-                {
-                    // Saat girilmişse, o saati kullan
-                    checkDateTime = requestedDate;
-                }
+                checkDateTime = (requestedDate.TimeOfDay == TimeSpan.Zero)
+                    ? requestedDate.Date + DefaultCheckTime
+                    : requestedDate;
 
-                // Gelen tarihin Kind'ı Unspecified ise UTC'ye çevir varsayalım
-                // veya sunucunun yerel saatiyse ToUniversalTime() kullan.
-                // Eğer API'nız her zaman UTC bekliyorsa SpecifyKind yeterli olabilir.
-                if (checkDateTime.Kind == DateTimeKind.Unspecified)
-                {
-                    // Bu senaryo, model binding'in nasıl çalıştığına bağlı.
-                    // Gelen string'de timezone yoksa ve sunucu Local ise, bu Local olur.
-                    // Güvenli olması için UTC'ye çevirelim.
-                     checkDateTime = checkDateTime.ToUniversalTime();
-                     // VEYA her zaman UTC geldiğini varsayıyorsanız:
-                     // checkDateTime = DateTime.SpecifyKind(checkDateTime, DateTimeKind.Utc);
-                }
-                else if (checkDateTime.Kind == DateTimeKind.Local)
-                {
-                    checkDateTime = checkDateTime.ToUniversalTime();
-                }
-                // Eğer zaten UTC ise dokunma
+                if (checkDateTime.Kind == DateTimeKind.Unspecified) checkDateTime = DateTime.SpecifyKind(checkDateTime, DateTimeKind.Utc);
+                else if (checkDateTime.Kind == DateTimeKind.Local) checkDateTime = checkDateTime.ToUniversalTime();
             }
             else
             {
-                // StatusCheckDate hiç girilmemişse, şu anki UTC zamanını kullan
                 checkDateTime = _dateTimeService.NowUtc;
             }
-            // <<<< BİTİŞ: Check DateTime Belirleme >>>>
+            // --- checkDateTime HESAPLAMASI SONU ---
+
+            // --- Yanıtta gösterilecek zaman (Her zaman 13:00 UTC) ---
+            DateTime responseStatusCheckDate = DateTime.SpecifyKind(
+                _dateTimeService.NowUtc.Date + new TimeSpan(19, 0, 0),
+                DateTimeKind.Utc
+            );
+            // --- Yanıtta gösterilecek zaman SONU ---
 
 
-            // Filtreleme için kullanılacak tarihleri de UTC'ye çevir (Availability)
-             DateTime? availabilityStartDateUtc = request.AvailabilityStartDate.HasValue
-                ? (request.AvailabilityStartDate.Value.Kind == DateTimeKind.Local
-                    ? request.AvailabilityStartDate.Value.ToUniversalTime()
-                    : DateTime.SpecifyKind(request.AvailabilityStartDate.Value, DateTimeKind.Utc))
-                : (DateTime?)null;
-            DateTime? availabilityEndDateUtc = request.AvailabilityEndDate.HasValue
-                ? (request.AvailabilityEndDate.Value.Kind == DateTimeKind.Local
-                    ? request.AvailabilityEndDate.Value.ToUniversalTime()
-                    : DateTime.SpecifyKind(request.AvailabilityEndDate.Value, DateTimeKind.Utc))
-                : (DateTime?)null;
-
+            DateTime? availabilityStartDateUtc = request.AvailabilityStartDate?.ToUniversalTime();
+            DateTime? availabilityEndDateUtc = request.AvailabilityEndDate?.ToUniversalTime();
 
             var query = _context.Rooms
                 .Include(r => r.Amenities)
-                 // Hesaplama için ilgili rezervasyonları (status ve tarih aralığına göre ön filtreleme) çekebiliriz.
-                 // Ancak CalculateRoomStatus içinde tüm Pending/Checked-in'leri almak daha garanti olabilir.
-                 // Şimdilik tüm relevant olanları alalım:
                 .Include(r => r.Reservations.Where(res => res.Status == "Pending" || res.Status == "Checked-in"))
+                .ThenInclude(res => res.Customer)
                 .AsQueryable();
 
             // Filtreleme
-            if (!string.IsNullOrEmpty(request.RoomType))
+            if (!string.IsNullOrEmpty(request.RoomType)) query = query.Where(r => r.RoomType == request.RoomType);
+            if (request.Floor.HasValue) query = query.Where(r => r.Floor == request.Floor.Value);
+            if (request.IsOnMaintenance.HasValue) query = query.Where(r => r.IsOnMaintenance == request.IsOnMaintenance.Value);
+            if (availabilityStartDateUtc.HasValue && availabilityEndDateUtc.HasValue)
             {
-                query = query.Where(r => r.RoomType == request.RoomType);
-            }
-            if (request.Floor.HasValue)
-            {
-                query = query.Where(r => r.Floor == request.Floor.Value);
-            }
-            if (request.IsOnMaintenance.HasValue)
-            {
-                 query = query.Where(r => r.IsOnMaintenance == request.IsOnMaintenance.Value);
-            }
-
-            // Müsaitlik tarih aralığına göre filtrele (UTC değerleri kullanarak)
-             if (availabilityStartDateUtc.HasValue && availabilityEndDateUtc.HasValue)
-            {
-                var startDate = availabilityStartDateUtc.Value;
-                var endDate = availabilityEndDateUtc.Value;
-
                  query = query.Where(room =>
                         !room.IsOnMaintenance &&
                         !room.Reservations.Any(res =>
-                            // Sadece Aktif/Bekleyen çakışmaları kontrol et
-                            (res.Status == "Pending" || res.Status == "Checked-in") &&
-                            res.StartDate < endDate && // Tam DateTime karşılaştırması
-                            res.EndDate > startDate     // Tam DateTime karşılaştırması
+                            res.StartDate < availabilityEndDateUtc.Value &&
+                            res.EndDate > availabilityStartDateUtc.Value
                         ));
             }
-
 
             var totalRecords = await query.CountAsync(cancellationToken);
 
@@ -164,49 +114,27 @@ namespace CleanArchitecture.Core.Features.Rooms.Queries.GetAllRooms
                 {
                     viewModel.Features = roomEntity.Amenities?.Select(a => a.Name).ToList() ?? new List<string>();
                     viewModel.IsOnMaintenance = roomEntity.IsOnMaintenance;
-                    // <<< DEĞİŞİKLİK: Güncellenmiş Calculate metodunu çağır >>>
+                    // *** DÜZELTME: Döngü dışında hesaplanan 'checkDateTime' kullanılır ***
                     viewModel.ComputedStatus = CalculateRoomStatus(roomEntity, checkDateTime);
-                     // <<< DEĞİŞİKLİK: Yanıta `.Date` değil, kullanılan checkDateTime'ı ata >>>
-                    viewModel.StatusCheckDate = checkDateTime;
+                    // *** DÜZELTME: Yanıtta gösterilecek zaman atanır ***
+                    viewModel.StatusCheckDate = responseStatusCheckDate;
                 }
             }
 
             return new PagedResponse<GetAllRoomsViewModel>(roomViewModels, request.PageNumber, request.PageSize, totalRecords);
         }
 
-        // <<< BAŞLANGIÇ: Güncellenmiş CalculateRoomStatus Metodu >>>
-        private string CalculateRoomStatus(Room room, DateTime checkDateTime) // Parametre adı değişti
+        // CalculateRoomStatus metodu (değişiklik yok)
+        private string CalculateRoomStatus(Room room, DateTime checkDateTime)
         {
-             if (room.IsOnMaintenance)
-            {
-                return "Maintenance";
-            }
+             if (room.IsOnMaintenance) return "Maintenance";
 
-            // checkDateTime anında odayı meşgul eden (Pending veya Checked-in) bir rezervasyon var mı?
-            // Veritabanındaki StartDate ve EndDate'in de UTC olduğu varsayılıyor.
-            var conflictingReservation = room.Reservations
+             var conflictingReservation = room.Reservations?
                 .FirstOrDefault(res =>
-                    (res.Status == "Pending" || res.Status == "Checked-in") &&
-                    checkDateTime >= res.StartDate && // Başlangıç dahil
-                    checkDateTime < res.EndDate);      // Bitiş hariç
+                    checkDateTime >= res.StartDate &&
+                    checkDateTime < res.EndDate);
 
-            if (conflictingReservation != null)
-            {
-                // Eğer çakışan rezervasyon 'Checked-in' ise kesinlikle 'Occupied'
-                if (conflictingReservation.Status == "Checked-in")
-                {
-                    return "Occupied";
-                }
-                // Eğer çakışan rezervasyon 'Pending' ise, bu 'Rezerve Edilmiş' anlamına gelir.
-                // İsteğe bağlı olarak farklı bir durum ("Reserved") döndürebilirsiniz
-                // veya basitlik için bunu da 'Occupied' gibi gösterebilirsiniz.
-                // Şimdilik ikisi için de "Occupied" döndürelim.
-                return "Occupied"; // Veya "Reserved"
-            }
-
-            // Çakışan aktif/bekleyen rezervasyon yoksa müsaittir.
-            return "Available";
+             return (conflictingReservation != null) ? "Occupied" : "Available";
         }
-        // <<< BİTİŞ: Güncellenmiş CalculateRoomStatus Metodu >>>
     }
 }
