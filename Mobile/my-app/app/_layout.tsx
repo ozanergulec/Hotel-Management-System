@@ -24,19 +24,25 @@ function RootLayoutNav() {
     const isLoginPage = segments[0] === 'login';
 
     if (!isAuthenticated && !isLoginPage) {
-      // Redirect to login if not authenticated
       router.replace('/login');
     } else if (isAuthenticated && isLoginPage) {
-      // Redirect to dashboard if authenticated and trying to access login page
       router.replace('/(tabs)');
     }
   }, [isAuthenticated, loading, segments]);
 
+  // If not authenticated, show login page
+  if (!loading && !isAuthenticated) {
+    return (
+      <Stack>
+        <Stack.Screen name="login" options={{ headerShown: false }} />
+      </Stack>
+    );
+  }
+
+  // If authenticated, show tabs
   return (
     <Stack>
-      <Stack.Screen name="login" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="+not-found" />
     </Stack>
   );
 }
