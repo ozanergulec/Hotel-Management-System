@@ -31,11 +31,9 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const loadUserFromStorage = async () => {
       try {
-        // First check if auto login is disabled
-        const autoLoginDisabled = await AsyncStorage.getItem('autoLoginDisabled');
-        if (autoLoginDisabled === 'true') {
+        // If auto login is disabled, don't restore the session
+        if (autoLoginDisabled) {
           console.log('Auto login is disabled, not restoring session');
-          setAutoLoginDisabled(true);
           setLoading(false);
           return;
         }
@@ -70,7 +68,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     loadUserFromStorage();
-  }, []);
+  }, [autoLoginDisabled]);
 
   // Login function
   const login = async (email, password) => {
