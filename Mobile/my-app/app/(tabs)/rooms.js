@@ -9,12 +9,10 @@ import {
   TouchableOpacity,
   FlatList,
   Modal,
-  Image,
   Alert
 } from 'react-native';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
-import { roomImages, getRandomRoomImage } from '../../assets/room-images';
 import Colors from '../../constants/Colors';
 
 export default function RoomsScreen() {
@@ -46,92 +44,79 @@ export default function RoomsScreen() {
   const [guestName, setGuestName] = useState('');
   const [showReservationDateModal, setShowReservationDateModal] = useState(false);
 
-  // Sample room data with added imageUrl property
+  // Sample room data
   const [rooms, setRooms] = useState([
     {
       id: '101',
       status: 'available',
-      capacity: '2 Kişilik',
-      amenities: ['TV', 'Minibar', 'Wi-Fi'],
-      price: '₺',
-      imageUrl: ''
+      capacity: '2 kişi',
+      amenities: ['TV', 'Wi-Fi', 'Klima'],
+      price: '₺500',
+      roomType: 'City view standard room'
     },
     {
       id: '102',
       status: 'occupied',
-      capacity: '2 Kişilik',
-      amenities: ['TV', 'Minibar', 'Wi-Fi'],
+      capacity: '2 kişi',
+      amenities: ['TV', 'Wi-Fi', 'Klima'],
       guest: 'Ayşe Yılmaz',
       checkIn: '15.04.2025',
-      checkOut: '25.04.2025',
-      imageUrl: ''
+      checkOut: '25.04.2025'
     },
     {
       id: '103',
       status: 'maintenance',
-      capacity: '2 Kişilik',
-      amenities: ['TV', 'Minibar', 'Wi-Fi'],
+      capacity: '2 kişi',
+      amenities: ['TV', 'Wi-Fi', 'Klima'],
       maintenance: 'Klima arızası',
-      expectedCompletion: '22.04.2025',
-      imageUrl: ''
+      expectedCompletion: '22.04.2025'
     },
     {
       id: '104',
       status: 'occupied',
-      capacity: '4 Kişilik',
-      amenities: ['TV', 'Minibar', 'Wi-Fi'],
+      capacity: '4 kişi',
+      amenities: ['TV', 'Wi-Fi', 'Klima', 'Minibar'],
       guest: 'Ali Kaya',
       checkIn: '16.04.2025',
-      checkOut: '28.04.2025',
-      imageUrl: ''
+      checkOut: '28.04.2025'
     },
     {
       id: '105',
       status: 'available',
-      capacity: '2 Kişilik',
-      amenities: ['TV', 'Minibar', 'Wi-Fi'],
-      price: '₺',
-      imageUrl: ''
+      capacity: '2 kişi',
+      amenities: ['TV', 'Wi-Fi', 'Klima'],
+      price: '₺500',
+      roomType: 'City view standard room'
     },
     {
       id: '201',
       status: 'available',
-      capacity: '2 Kişilik',
-      amenities: ['TV', 'Minibar', 'Wi-Fi'],
-      price: '₺',
-      imageUrl: ''
+      capacity: '2 kişi',
+      amenities: ['TV', 'Wi-Fi', 'Klima'],
+      price: '₺500',
+      roomType: 'City view standard room'
     },
     {
       id: '202',
       status: 'occupied',
-      capacity: '2 Kişilik',
-      amenities: ['TV', 'Minibar', 'Wi-Fi'],
+      capacity: '2 kişi',
+      amenities: ['TV', 'Wi-Fi', 'Klima'],
       guest: 'Zeynep Demir',
       checkIn: '18.04.2025',
-      checkOut: '26.04.2025',
-      imageUrl: ''
+      checkOut: '26.04.2025'
     },
     {
       id: '203',
       status: 'available',
-      capacity: '2 Kişilik',
-      amenities: ['TV', 'Minibar', 'Wi-Fi'],
-      price: '₺',
-      imageUrl: ''
+      capacity: '2 kişi',
+      amenities: ['TV', 'Wi-Fi', 'Klima'],
+      price: '₺500',
+      roomType: 'City view standard room'
     }
   ]);
 
   // All available features for filtering
   const availableFeatures = ['TV', 'Minibar', 'Wi-Fi', 'Balkon', 'Deniz Manzarası', 'Jakuzi'];
-
-  // Assign random images to rooms on component mount
-  useEffect(() => {
-    const roomsWithImages = rooms.map(room => ({
-      ...room,
-      imageUrl: getRandomRoomImage()
-    }));
-    setRooms(roomsWithImages);
-  }, []);
 
   // Filter the rooms based on search text, status filter, and other filters
   const filteredRooms = rooms.filter(room => {
@@ -324,11 +309,8 @@ export default function RoomsScreen() {
   // Refresh room data
   const refreshRooms = () => {
     // In a real app, this would fetch data from an API
-    // For this demo, we'll just reassign images
-    const refreshedRooms = rooms.map(room => ({
-      ...room,
-      imageUrl: getRandomRoomImage()
-    }));
+    // For this demo, we'll just update the state without changing anything
+    const refreshedRooms = [...rooms];
     setRooms(refreshedRooms);
   };
 
@@ -725,22 +707,40 @@ export default function RoomsScreen() {
 
   const renderRoomCard = ({ item }) => (
     <View style={styles.roomCard}>
-      <View style={[styles.roomHeader, { backgroundColor: getStatusColor(item.status) }]}>
-        <MaterialIcons name={getStatusIcon(item.status)} size={20} color="white" />
+      <View style={[styles.roomHeader, { backgroundColor: item.status === 'available' ? '#4CAF50' : getStatusColor(item.status) }]}>
         <Text style={styles.roomNumber}>{item.id}</Text>
-        <Text style={styles.statusText}>{getStatusText(item.status)}</Text>
+        <Text style={styles.capacityText}>{item.capacity}</Text>
       </View>
       
-      {/* Room Image */}
-      <Image
-        source={{ uri: item.imageUrl }}
-        style={styles.roomImage}
-        resizeMode="cover"
-      />
-      
       <View style={styles.roomContent}>
-        <Text style={styles.roomInfo}>• {item.capacity}</Text>
-        <Text style={styles.roomInfo}>• {item.amenities.join(' • ')}</Text>
+        <View style={styles.amenitiesRow}>
+          {item.amenities.map((amenity, index) => (
+            <View key={index} style={styles.amenityItem}>
+              <MaterialIcons 
+                name={
+                  amenity === 'TV' ? 'tv' : 
+                  amenity === 'Minibar' ? 'kitchen' : 
+                  amenity === 'Wi-Fi' ? 'wifi' :
+                  amenity === 'Klima' ? 'ac-unit' : 'check'
+                } 
+                size={18} 
+                color="#555" 
+              />
+              <Text style={styles.amenityItemText}>{amenity}</Text>
+            </View>
+          ))}
+        </View>
+        
+        {item.status === 'available' && (
+          <View style={styles.priceContainer}>
+            <Text style={styles.priceLabel}>Gecelik Fiyat: </Text>
+            <Text style={styles.price}>{item.price}</Text>
+          </View>
+        )}
+        
+        {item.status === 'available' && (
+          <Text style={styles.roomTypeText}>{item.roomType}</Text>
+        )}
         
         {item.status === 'occupied' && (
           <>
@@ -755,13 +755,6 @@ export default function RoomsScreen() {
             <Text style={styles.dateInfo}>Tahmini Bitiş: {item.expectedCompletion}</Text>
           </>
         )}
-        
-        {item.status === 'available' && (
-          <View style={styles.priceContainer}>
-            <Text style={styles.priceLabel}>Gecelik Fiyat: </Text>
-            <Text style={styles.price}>{item.price}</Text>
-          </View>
-        )}
       </View>
       
       <View style={styles.roomActions}>
@@ -769,7 +762,7 @@ export default function RoomsScreen() {
           style={styles.detailsButton}
           onPress={() => showRoomDetails(item)}
         >
-          <MaterialIcons name="info" size={16} color="#3C3169" />
+          <MaterialIcons name="info-outline" size={16} color="#673AB7" />
           <Text style={styles.buttonText}>DETAYLAR</Text>
         </TouchableOpacity>
         
@@ -778,7 +771,7 @@ export default function RoomsScreen() {
             style={styles.reserveButton}
             onPress={() => handleReservation(item)}
           >
-            <MaterialIcons name="date-range" size={16} color="white" />
+            <MaterialIcons name="event-available" size={16} color="white" />
             <Text style={styles.reserveText}>REZERVE ET</Text>
           </TouchableOpacity>
         )}
@@ -805,13 +798,6 @@ export default function RoomsScreen() {
               </TouchableOpacity>
             </View>
             
-            {/* Room Image in Modal */}
-            <Image
-              source={{ uri: selectedRoom.imageUrl }}
-              style={styles.modalRoomImage}
-              resizeMode="cover"
-            />
-            
             <View style={styles.modalBody}>
               <View style={styles.roomInfoSection}>
                 <Text style={styles.sectionTitle}>Oda Bilgileri</Text>
@@ -821,7 +807,7 @@ export default function RoomsScreen() {
                   </Text>
                 </View>
                 <Text style={styles.roomDetailText}>Kapasite: {selectedRoom.capacity}</Text>
-                <Text style={styles.roomDetailText}>Gecelik Fiyat: {selectedRoom.price || '-'}</Text>
+                <Text style={styles.roomDetailText}>Gecelik Fiyat: {selectedRoom.price}</Text>
               </View>
               
               {selectedRoom.status === 'occupied' && (
@@ -1634,50 +1620,66 @@ const styles = StyleSheet.create({
   },
   roomCard: {
     backgroundColor: 'white',
-    borderRadius: 5,
+    borderRadius: 8,
     marginBottom: 15,
     overflow: 'hidden',
-    borderLeftWidth: 4,
-    borderLeftColor: '#ddd',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowRadius: 3,
+    elevation: 3,
   },
   roomHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
+    justifyContent: 'space-between',
+    padding: 12,
   },
   roomNumber: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
-    marginLeft: 10,
+    fontSize: 18,
   },
-  statusText: {
+  capacityText: {
     color: 'white',
-    marginLeft: 'auto',
-  },
-  // New styles for room images
-  roomImage: {
-    width: '100%',
-    height: 150,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
-  },
-  modalRoomImage: {
-    width: '100%',
-    height: 200,
+    fontWeight: '500',
   },
   roomContent: {
-    padding: 10,
+    padding: 15,
   },
-  roomInfo: {
+  amenitiesRow: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  amenityItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  amenityItemText: {
+    marginLeft: 5,
     fontSize: 13,
     color: '#555',
-    marginBottom: 3,
+  },
+  priceContainer: {
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  priceLabel: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '600',
+  },
+  price: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  roomTypeText: {
+    fontSize: 15,
+    color: '#333',
+    marginBottom: 8,
+    fontWeight: '500',
   },
   guestInfo: {
     fontSize: 13,
@@ -1696,20 +1698,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     color: '#FF9800',
   },
-  priceContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  priceLabel: {
-    fontSize: 13,
-    color: '#333',
-  },
-  price: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: '#3C3169',
-  },
   roomActions: {
     flexDirection: 'row',
     borderTopWidth: 1,
@@ -1719,30 +1707,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 10,
+    padding: 12,
     flex: 1,
+    backgroundColor: '#EDE7F6',
   },
   buttonText: {
     marginLeft: 5,
-    color: '#3C3169',
-    fontSize: 12,
-    fontWeight: '500',
+    color: '#673AB7',
+    fontSize: 13,
+    fontWeight: 'bold',
   },
   reserveButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 10,
-    backgroundColor: '#3C3169',
+    padding: 12,
+    backgroundColor: '#673AB7',
     flex: 1,
   },
   reserveText: {
     marginLeft: 5,
     color: 'white',
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: 'bold',
   },
-  // Modal styles
   modalContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -2115,7 +2103,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
-  // Calendar view styles
   calendarViewContainer: {
     backgroundColor: 'white',
     borderRadius: 8,
@@ -2263,11 +2250,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     marginRight: 10,
-  },
-  cancelText: {
-    color: '#E53935',
-    fontSize: 14,
-    fontWeight: '500',
   },
   confirmReservationButton: {
     backgroundColor: '#3C3169',
