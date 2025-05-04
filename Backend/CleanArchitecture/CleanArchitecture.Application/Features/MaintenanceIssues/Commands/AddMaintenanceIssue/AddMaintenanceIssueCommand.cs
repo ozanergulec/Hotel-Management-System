@@ -1,4 +1,6 @@
 ﻿// File: Backend/CleanArchitecture/CleanArchitecture.Application/Features/MaintenanceIssues/Commands/AddMaintenanceIssue/AddMaintenanceIssueCommand.cs
+// İçindeki AddMaintenanceIssueCommandHandler sınıfının Handle metodu
+
 using AutoMapper;
 using CleanArchitecture.Core.Exceptions;
 using CleanArchitecture.Core.Interfaces.Repositories;
@@ -10,6 +12,7 @@ using CleanArchitecture.Core.Entities;
 
 namespace CleanArchitecture.Core.Features.MaintenanceIssues.Commands.AddMaintenanceIssue
 {
+    // Command sınıfı aynı kalır
     public class AddMaintenanceIssueCommand : IRequest<int>
     {
         public int RoomId { get; set; }
@@ -17,6 +20,7 @@ namespace CleanArchitecture.Core.Features.MaintenanceIssues.Commands.AddMaintena
         public DateTime EstimatedCompletionDate { get; set; }
     }
 
+    // Command Handler (GÜNCELLENDİ)
     public class AddMaintenanceIssueCommandHandler : IRequestHandler<AddMaintenanceIssueCommand, int>
     {
         private readonly IRoomRepositoryAsync _roomRepository;
@@ -42,13 +46,15 @@ namespace CleanArchitecture.Core.Features.MaintenanceIssues.Commands.AddMaintena
                 throw new EntityNotFoundException("Room", request.RoomId);
             }
 
-            // Odayı bakım durumuna al
-            room.IsOnMaintenance = true; // <<< GÜNCELLENDİ
-            await _roomRepository.UpdateAsync(room);
+            // --- KALDIRILAN BÖLÜM ---
+            // Odanın IsOnMaintenance flag'i artık burada otomatik olarak değiştirilmiyor.
+            // room.IsOnMaintenance = true;
+            // await _roomRepository.UpdateAsync(room);
+            // --- KALDIRILAN BÖLÜM SONU ---
 
             // Add maintenance issue
             var maintenanceIssue = _mapper.Map<MaintenanceIssue>(request);
-            // RoomId zaten request içinde var, AutoMapper maplemeli. Elle set etmeye gerek yok.
+            // RoomId zaten request içinde var ve AutoMapper tarafından maplenmeli.
             // maintenanceIssue.RoomId = request.RoomId;
             await _maintenanceIssueRepository.AddAsync(maintenanceIssue);
 
