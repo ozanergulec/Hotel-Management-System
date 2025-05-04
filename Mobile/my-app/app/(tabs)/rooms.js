@@ -428,11 +428,11 @@ export default function RoomsScreen() {
             
             <View style={styles.monthSelector}>
               <TouchableOpacity onPress={() => changeMonth(-1)}>
-                <MaterialIcons name="chevron-left" size={24} color="#3C3169" />
+                <MaterialIcons name="chevron-left" size={24} color="#6B3DC9" />
               </TouchableOpacity>
               <Text style={styles.monthYearText}>{`${month} ${year}`}</Text>
               <TouchableOpacity onPress={() => changeMonth(1)}>
-                <MaterialIcons name="chevron-right" size={24} color="#3C3169" />
+                <MaterialIcons name="chevron-right" size={24} color="#6B3DC9" />
               </TouchableOpacity>
             </View>
             
@@ -499,7 +499,7 @@ export default function RoomsScreen() {
               )}
               
               <TouchableOpacity 
-                style={[styles.calendarButton, { backgroundColor: '#3C3169', flex: 1 }]}
+                style={[styles.calendarButton, { backgroundColor: '#6B3DC9', flex: 1 }]}
                 onPress={() => setShowCalendar(false)}
               >
                 <Text style={[styles.calendarButtonText, { color: 'white' }]}>TAMAM</Text>
@@ -839,7 +839,7 @@ export default function RoomsScreen() {
                           item === 'Wi-Fi' ? 'wifi' : 'check'
                         } 
                         size={16} 
-                        color="#3C3169" 
+                        color="#6B3DC9" 
                       />
                       <Text style={styles.amenityText}>{item}</Text>
                     </View>
@@ -1022,13 +1022,13 @@ export default function RoomsScreen() {
       <View style={styles.calendarViewContainer}>
         <View style={styles.calendarViewHeader}>
           <TouchableOpacity onPress={() => changeCalendarViewRange(-1)}>
-            <MaterialIcons name="chevron-left" size={24} color="#3C3169" />
+            <MaterialIcons name="chevron-left" size={24} color="#6B3DC9" />
           </TouchableOpacity>
           
           <Text style={styles.dateRangeText}>{formatDateRangeDisplay()}</Text>
           
           <TouchableOpacity onPress={() => changeCalendarViewRange(1)}>
-            <MaterialIcons name="chevron-right" size={24} color="#3C3169" />
+            <MaterialIcons name="chevron-right" size={24} color="#6B3DC9" />
           </TouchableOpacity>
           
           <TouchableOpacity 
@@ -1109,12 +1109,8 @@ export default function RoomsScreen() {
   return (
     <SafeAreaView style={styles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={styles.headerRow}>
         <Text style={styles.headerTitle}>Room Status</Text>
-        <View style={styles.headerRight}>
-          <Text style={styles.username}>{username}</Text>
-          <MaterialIcons name="logout" size={24} color="white" />
-        </View>
       </View>
       
       {/* Main Content */}
@@ -1133,7 +1129,7 @@ export default function RoomsScreen() {
             <MaterialIcons 
               name="grid-view" 
               size={20} 
-              color={activeView === 'card' ? '#3C3169' : '#666'} 
+              color={activeView === 'card' ? '#6B3DC9' : '#666'} 
             />
             <Text 
               style={[
@@ -1155,7 +1151,7 @@ export default function RoomsScreen() {
             <MaterialIcons 
               name="calendar-today" 
               size={20} 
-              color={activeView === 'calendar' ? '#3C3169' : '#666'} 
+              color={activeView === 'calendar' ? '#6B3DC9' : '#666'} 
             />
             <Text 
               style={[
@@ -1171,7 +1167,7 @@ export default function RoomsScreen() {
             style={styles.refreshButton}
             onPress={refreshRooms}
           >
-            <MaterialIcons name="refresh" size={20} color="#3C3169" />
+            <MaterialIcons name="refresh" size={20} color="#6B3DC9" />
             <Text style={styles.refreshText}>YENİLE</Text>
           </TouchableOpacity>
         </View>
@@ -1199,7 +1195,7 @@ export default function RoomsScreen() {
                 style={styles.advancedFilter}
                 onPress={() => setShowFilters(!showFilters)}
               >
-                <MaterialIcons name="filter-list" size={20} color="#3C3169" />
+                <MaterialIcons name="filter-list" size={20} color="#6B3DC9" />
                 <Text style={styles.advancedFilterText}>GELİŞMİŞ FİLTRELER</Text>
               </TouchableOpacity>
             </View>
@@ -1225,7 +1221,7 @@ export default function RoomsScreen() {
                       {status}
                     </Text>
                     {statusFilter === status && (
-                      <MaterialIcons name="check" size={16} color="#3C3169" />
+                      <MaterialIcons name="check" size={16} color="#6B3DC9" />
                     )}
                   </TouchableOpacity>
                 ))}
@@ -1345,7 +1341,7 @@ export default function RoomsScreen() {
                 <View key={index} style={styles.filterTag}>
                   <Text style={styles.filterTagText}>{displayText}</Text>
                   <TouchableOpacity onPress={() => removeFilter(filter)}>
-                    <MaterialIcons name="close" size={16} color="#3C3169" />
+                    <MaterialIcons name="close" size={16} color="#6B3DC9" />
                   </TouchableOpacity>
                 </View>
               );
@@ -1414,27 +1410,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
-  header: {
+  headerRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#3C3169',
+    justifyContent: 'flex-start',
+    backgroundColor: '#6B3DC9',
     paddingVertical: 15,
-    paddingHorizontal: 20,
+    paddingHorizontal: 15,
   },
   headerTitle: {
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  username: {
-    color: 'white',
-    marginRight: 15,
-    fontSize: 16,
   },
   content: {
     flex: 1,
@@ -1461,7 +1448,7 @@ const styles = StyleSheet.create({
   },
   activeToggle: {
     borderBottomWidth: 2,
-    borderBottomColor: '#3C3169',
+    borderBottomColor: '#6B3DC9',
   },
   toggleText: {
     marginLeft: 5,
@@ -1470,7 +1457,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   activeToggleText: {
-    color: '#3C3169',
+    color: '#6B3DC9',
     fontWeight: 'bold',
   },
   refreshButton: {
@@ -1482,7 +1469,7 @@ const styles = StyleSheet.create({
   },
   refreshText: {
     marginLeft: 5,
-    color: '#3C3169',
+    color: '#6B3DC9',
     fontSize: 12,
     fontWeight: '500',
   },
@@ -1530,7 +1517,7 @@ const styles = StyleSheet.create({
   },
   advancedFilterText: {
     marginLeft: 5,
-    color: '#3C3169',
+    color: '#6B3DC9',
     fontSize: 13,
     fontWeight: '500',
   },
@@ -1611,7 +1598,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   filterTagText: {
-    color: '#3C3169',
+    color: '#6B3DC9',
     marginRight: 5,
     fontSize: 12,
   },
@@ -1748,7 +1735,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#3C3169',
+    backgroundColor: '#6B3DC9',
     padding: 15,
   },
   modalTitle: {
@@ -1822,12 +1809,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   amenityText: {
-    color: '#3C3169',
+    color: '#6B3DC9',
     fontSize: 12,
     marginLeft: 5,
   },
   closeButton: {
-    backgroundColor: '#3C3169',
+    backgroundColor: '#6B3DC9',
     paddingVertical: 12,
     borderRadius: 5,
     alignItems: 'center',
@@ -1866,7 +1853,7 @@ const styles = StyleSheet.create({
   },
   selectedDropdownText: {
     fontWeight: 'bold',
-    color: '#3C3169',
+    color: '#6B3DC9',
   },
   featuresDropdownMenu: {
     marginTop: 10,
@@ -1900,8 +1887,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   checkedBox: {
-    backgroundColor: '#3C3169',
-    borderColor: '#3C3169',
+    backgroundColor: '#6B3DC9',
+    borderColor: '#6B3DC9',
   },
   featureItemText: {
     color: '#333',
@@ -1926,7 +1913,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   applyFiltersButton: {
-    backgroundColor: '#3C3169',
+    backgroundColor: '#6B3DC9',
     padding: 10,
     borderRadius: 5,
     flex: 1,
@@ -1958,7 +1945,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   resetButton: {
-    backgroundColor: '#3C3169',
+    backgroundColor: '#6B3DC9',
     padding: 10,
     borderRadius: 5,
     paddingHorizontal: 20,
@@ -2024,7 +2011,7 @@ const styles = StyleSheet.create({
   monthYearText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#3C3169',
+    color: '#6B3DC9',
   },
   daysOfWeek: {
     flexDirection: 'row',
@@ -2069,7 +2056,7 @@ const styles = StyleSheet.create({
     color: 'transparent',
   },
   selectedDay: {
-    backgroundColor: '#3C3169',
+    backgroundColor: '#6B3DC9',
     borderRadius: 20,
   },
   todayDay: {
@@ -2081,7 +2068,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   todayDayText: {
-    color: '#3C3169',
+    color: '#6B3DC9',
     fontWeight: '600',
   },
   calendarActions: {
@@ -2130,7 +2117,7 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   todayButton: {
-    backgroundColor: '#3C3169',
+    backgroundColor: '#6B3DC9',
     paddingVertical: 5,
     paddingHorizontal: 10,
     borderRadius: 5,
@@ -2252,7 +2239,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   confirmReservationButton: {
-    backgroundColor: '#3C3169',
+    backgroundColor: '#6B3DC9',
     paddingVertical: 10,
     paddingHorizontal: 15,
     borderRadius: 5,
