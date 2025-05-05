@@ -80,6 +80,10 @@ const roomService = {
     try {
       console.log("Getting all rooms with params:", params);
       const response = await apiClient.get('/v1/Room', { params });
+      
+      // Log the API response to see the actual room data structure
+      console.log("Raw room data from API:", JSON.stringify(response.data.data[0], null, 2));
+      
       return response.data;
     } catch (error) {
       console.error('Error fetching rooms:', error.response?.data || error.message);
@@ -121,15 +125,31 @@ const roomService = {
     }
   },
 
-  // Create a new reservation
+  // Create a new reservation - Güncellenmiş API formatı
   reserveRoom: async (reservationData) => {
     try {
-      console.log("Creating reservation:", reservationData);
-      const response = await apiClient.post('/v1/Reservation', reservationData);
+      console.log("Creating reservation with raw data:", reservationData);
+      
+      // Create a simplified API request data with proper date format
+      const apiRequestData = {
+        customerIdNumber: reservationData.customerIdNumber.toString(),
+        roomId: parseInt(reservationData.roomId),
+        // Format dates as simple strings without time portion in YYYY-MM-DD format
+        startDate: reservationData.checkInDate,
+        endDate: reservationData.checkOutDate,
+        numberOfGuests: parseInt(reservationData.numberOfGuests) || 1
+      };
+      
+      console.log("API Request simplified payload:", JSON.stringify(apiRequestData, null, 2));
+      
+      // Use axios instead of fetch for consistency
+      const response = await apiClient.post('/v1/Reservation', apiRequestData);
+      console.log("API Response:", response.data);
+      
       return response.data;
     } catch (error) {
       console.error('Error creating reservation:', error.response?.data || error.message);
-      throw error;
+      throw error.response?.data || error;
     }
   },
 
@@ -182,6 +202,9 @@ const roomService = {
 
   // Format room data from API to match UI requirements
   formatRoomData: (apiRoom) => {
+    // Log the raw room data to see what we're working with
+    console.log("Formatting room data:", JSON.stringify(apiRoom, null, 2));
+    
     // Find the current reservation if exists
     const currentReservation = apiRoom.reservations?.find(r => 
       new Date(r.checkOutDate) >= new Date() && r.status !== 'Cancelled'
@@ -249,9 +272,13 @@ const roomService = {
       status = 'available';
     }
 
+    // Get the definitive numeric ID for the room (this is what the API expects)
+    const roomId = apiRoom.id || 0;
+    
     // Build formatted room object
     const formattedRoom = {
-      id: apiRoom.roomNumber.toString(),
+      id: roomId,  // Use the numeric ID directly
+      roomNumber: apiRoom.roomNumber ? apiRoom.roomNumber.toString() : roomId.toString(),
       status,
       capacity: `${apiRoom.capacity} kişi`,
       amenities: apiRoom.features || [],
@@ -285,6 +312,7 @@ const roomService = {
       formattedRoom.maintenanceId = apiRoom.maintenanceIssueId;
     }
 
+    console.log("Formatted room:", formattedRoom.id, formattedRoom.roomNumber);
     return formattedRoom;
   }
 };

@@ -43,7 +43,8 @@ export default function RoomsScreen() {
   const [reservationModalVisible, setReservationModalVisible] = useState(false);
   const [reservationRoom, setReservationRoom] = useState(null);
   const [reservationDates, setReservationDates] = useState({ start: '', end: '' });
-  const [guestName, setGuestName] = useState('');
+  const [customerIdNumber, setCustomerIdNumber] = useState('');
+  const [numberOfGuests, setNumberOfGuests] = useState('2');
   const [showReservationDateModal, setShowReservationDateModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -91,6 +92,7 @@ export default function RoomsScreen() {
       // Transform API response to match our UI format
       const formattedRooms = response.data.map(room => roomService.formatRoomData(room));
       
+      console.log("Formatted rooms (first 2):", formattedRooms.slice(0, 2).map(r => ({id: r.id, roomNumber: r.roomNumber})));
       setRooms(formattedRooms);
     } catch (err) {
       console.error('Error fetching rooms:', err);
@@ -570,6 +572,9 @@ export default function RoomsScreen() {
   };
 
   const handleReservation = (room) => {
+    // Log room object to help debug
+    console.log("Room for reservation:", JSON.stringify(room, null, 2));
+    
     // Check if date range is already selected
     if (!startDate || !endDate) {
       // If dates aren't selected, open the reservation date modal first
@@ -580,53 +585,88 @@ export default function RoomsScreen() {
       // If dates are already selected, proceed directly to guest name
       setReservationRoom(room);
       setReservationDates({ start: startDate, end: endDate });
-      setGuestName('');
+      setCustomerIdNumber('');
+      setNumberOfGuests('2');
       setReservationModalVisible(true);
     }
   };
 
   const confirmReservation = async () => {
-    if (!guestName.trim()) {
-      Alert.alert('Hata', 'Lütfen misafir adını girin.');
+    if (!customerIdNumber.trim()) {
+      Alert.alert('Hata', 'Lütfen müşteri TC Kimlik No girin.');
+      return;
+    }
+    
+    if (!reservationDates.start || !reservationDates.end) {
+      Alert.alert('Hata', 'Lütfen giriş ve çıkış tarihlerini seçin.');
       return;
     }
     
     try {
       setIsLoading(true);
+      console.log("Reservation dates:", reservationDates);
       
       // Format dates for API (DD.MM.YYYY to YYYY-MM-DD)
       const formatDateForApi = (dateStr) => {
-        const [day, month, year] = dateStr.split('.');
+        // Parse DD.MM.YYYY format
+        const parts = dateStr.split('.');
+        if (parts.length !== 3) {
+          console.error("Invalid date format:", dateStr);
+          return null;
+        }
+        
+        const day = parts[0].padStart(2, '0');
+        const month = parts[1].padStart(2, '0');
+        const year = parts[2];
+        
+        // Return in YYYY-MM-DD format
         return `${year}-${month}-${day}`;
       };
       
       // Create reservation payload
       const reservationData = {
-        roomId: parseInt(reservationRoom.id),
-        customerName: guestName,
+        roomId: reservationRoom.id,
+        customerIdNumber: customerIdNumber.trim(),
         checkInDate: formatDateForApi(reservationDates.start),
         checkOutDate: formatDateForApi(reservationDates.end),
+        numberOfGuests: parseInt(numberOfGuests) || 1
       };
       
+      console.log("Sending reservation data:", reservationData);
+      
       // Call API to create reservation
-      await roomService.reserveRoom(reservationData);
-      
-      // Close modal
-      setReservationModalVisible(false);
-      
-      // Clear date filters after reservation
-      setStartDate('');
-      setEndDate('');
-      setActiveFilters(activeFilters.filter(filter => 
-        filter.type !== 'startDate' && filter.type !== 'endDate'
-      ));
-      
-      // Show confirmation
-      Alert.alert(
-        'Başarılı', 
-        `Oda ${reservationRoom.id} başarıyla ${guestName} adına rezerve edildi.`,
-        [{ text: 'Tamam', onPress: () => refreshRooms() }]
-      );
+      try {
+        const response = await roomService.reserveRoom(reservationData);
+        console.log("Reservation response:", response);
+        
+        // Close modal
+        setReservationModalVisible(false);
+        
+        // Clear date filters after reservation
+        setStartDate('');
+        setEndDate('');
+        setActiveFilters(activeFilters.filter(filter => 
+          filter.type !== 'startDate' && filter.type !== 'endDate'
+        ));
+        
+        // Show confirmation
+        Alert.alert(
+          'Başarılı', 
+          `Oda ${reservationRoom.roomNumber || reservationRoom.id} başarıyla rezerve edildi.`,
+          [{ text: 'Tamam', onPress: () => refreshRooms() }]
+        );
+      } catch (error) {
+        console.error('API error:', error);
+        let errorMessage = 'Rezervasyon yapılırken bir hata oluştu.';
+        
+        if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        Alert.alert('Rezervasyon Hatası', errorMessage);
+      }
     } catch (error) {
       console.error('Reservation error:', error);
       Alert.alert('Hata', 'Rezervasyon yapılırken bir hata oluştu. Lütfen tekrar deneyin.');
@@ -646,45 +686,98 @@ export default function RoomsScreen() {
         onRequestClose={() => setReservationModalVisible(false)}
       >
         <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Rezervasyon: Oda {reservationRoom.id}</Text>
+          <View style={styles.reservationModalContent}>
+            <View style={styles.reservationModalHeader}>
+              <Text style={styles.reservationModalTitle}>Oda {reservationRoom.id} için Rezervasyon</Text>
               <TouchableOpacity onPress={() => setReservationModalVisible(false)}>
-                <MaterialIcons name="close" size={24} color="white" />
+                <MaterialIcons name="close" size={24} color="#888" />
               </TouchableOpacity>
             </View>
             
-            <View style={styles.modalBody}>
-              <Text style={styles.sectionTitle}>Rezervasyon Bilgileri</Text>
-              
-              <View style={styles.reservationInfo}>
-                <Text style={styles.roomDetailText}>Giriş Tarihi: {reservationDates.start}</Text>
-                <Text style={styles.roomDetailText}>Çıkış Tarihi: {reservationDates.end}</Text>
-              </View>
-              
-              <View style={styles.guestInputContainer}>
-                <Text style={styles.inputLabel}>Misafir Adı:</Text>
+            <View style={styles.reservationModalBody}>
+              {/* TC Kimlik No */}
+              <View style={styles.reservationInputGroup}>
+                <Text style={styles.reservationInputLabel}>
+                  <MaterialIcons name="person" size={18} color="#666" /> Müşteri TC Kimlik No:
+                </Text>
                 <TextInput
-                  style={styles.guestInput}
-                  placeholder="Misafir adını girin"
-                  value={guestName}
-                  onChangeText={setGuestName}
+                  style={styles.reservationTextInput}
+                  placeholder="11 Haneli TC Kimlik No"
+                  value={customerIdNumber}
+                  onChangeText={setCustomerIdNumber}
+                  keyboardType="number-pad"
+                  maxLength={11}
                 />
               </View>
               
-              <View style={styles.modalActions}>
+              {/* Giriş Tarihi */}
+              <View style={styles.reservationInputGroup}>
+                <Text style={styles.reservationInputLabel}>
+                  <MaterialIcons name="calendar-today" size={18} color="#666" /> Giriş Tarihi:
+                </Text>
                 <TouchableOpacity 
-                  style={styles.cancelReservationButton}
+                  style={styles.reservationDateInput}
+                  onPress={() => {
+                    setCalendarType('reservationStart');
+                    setShowCalendar(true);
+                  }}
+                >
+                  <Text>{reservationDates.start || 'GG.AA.YYYY'}</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Çıkış Tarihi */}
+              <View style={styles.reservationInputGroup}>
+                <Text style={styles.reservationInputLabel}>
+                  <MaterialIcons name="calendar-today" size={18} color="#666" /> Çıkış Tarihi:
+                </Text>
+                <TouchableOpacity 
+                  style={styles.reservationDateInput}
+                  onPress={() => {
+                    setCalendarType('reservationEnd');
+                    setShowCalendar(true);
+                  }}
+                >
+                  <Text>{reservationDates.end || 'GG.AA.YYYY'}</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Misafir Sayısı */}
+              <View style={styles.reservationInputGroup}>
+                <Text style={styles.reservationInputLabel}>
+                  <MaterialIcons name="people" size={18} color="#666" /> Misafir Sayısı:
+                </Text>
+                <TextInput
+                  style={styles.reservationTextInput}
+                  placeholder="Misafir sayısı"
+                  value={numberOfGuests}
+                  onChangeText={setNumberOfGuests}
+                  keyboardType="number-pad"
+                />
+              </View>
+              
+              {/* İşlem Butonları */}
+              <View style={styles.reservationButtonContainer}>
+                <TouchableOpacity 
+                  style={styles.reservationCancelBtn}
                   onPress={() => setReservationModalVisible(false)}
                 >
-                  <Text style={styles.cancelText}>İPTAL</Text>
+                  <Text style={styles.reservationCancelBtnText}>İptal</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
-                  style={styles.confirmReservationButton}
+                  style={styles.reservationCreateBtn}
                   onPress={confirmReservation}
+                  disabled={isLoading}
                 >
-                  <Text style={styles.confirmText}>REZERVASYONU ONAYLA</Text>
+                  {isLoading ? (
+                    <ActivityIndicator size="small" color="white" />
+                  ) : (
+                    <>
+                      <MaterialIcons name="event-available" size={18} color="white" />
+                      <Text style={styles.reservationCreateBtnText}>Rezervasyon Oluştur</Text>
+                    </>
+                  )}
                 </TouchableOpacity>
               </View>
             </View>
@@ -775,7 +868,8 @@ export default function RoomsScreen() {
     }
     
     setShowReservationDateModal(false);
-    setGuestName('');
+    setCustomerIdNumber('');
+    setNumberOfGuests('2');
     setReservationModalVisible(true);
   };
 
@@ -821,7 +915,7 @@ export default function RoomsScreen() {
           styles.roomHeader, 
           { backgroundColor: statusColor }
         ]}>
-          <Text style={styles.roomNumber}>{item.id}</Text>
+          <Text style={styles.roomNumber}>{item.roomNumber || item.id}</Text>
           <Text style={styles.capacityText}>{item.capacity}</Text>
         </View>
         
@@ -1878,6 +1972,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     paddingHorizontal: 10,
     paddingVertical: 10,
+    paddingLeft: 30,
   },
   featureFilter: {
     marginBottom: 10,
@@ -2574,11 +2669,14 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     alignItems: 'center',
     flex: 2,
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
   confirmText: {
     color: 'white',
     fontSize: 14,
     fontWeight: '500',
+    marginLeft: 5,
   },
   loadingContainer: {
     padding: 20,
@@ -2683,5 +2781,207 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginLeft: 5,
     flex: 1,
+  },
+  formGroup: {
+    marginBottom: 15,
+  },
+  formGroupIcon: {
+    position: 'absolute',
+    left: 0,
+    top: 24,
+    zIndex: 1,
+  },
+  formRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  formInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    paddingLeft: 30,
+    fontSize: 14,
+  },
+  reservationFormContainer: {
+    marginBottom: 20,
+  },
+  reservationFormGroup: {
+    marginBottom: 15,
+  },
+  reservationFormIcon: {
+    position: 'absolute',
+    left: 0,
+    top: 24,
+    zIndex: 1,
+  },
+  reservationFormLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 5,
+    color: '#333',
+  },
+  reservationFormInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    paddingLeft: 30,
+    fontSize: 14,
+  },
+  reservationFormRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  reservationDateGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  reservationDateInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    paddingLeft: 30,
+    fontSize: 14,
+  },
+  reservationActionButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 15,
+  },
+  reservationCancelButton: {
+    backgroundColor: '#f0f0f0',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 5,
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 10,
+  },
+  reservationCancelText: {
+    color: '#E53935',
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 5,
+  },
+  reservationConfirmButton: {
+    backgroundColor: '#6B3DC9',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 5,
+    alignItems: 'center',
+    flex: 2,
+    flexDirection: 'row',
+    justifyContent: 'center',
+  },
+  reservationConfirmText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 5,
+  },
+  reservationModalContent: {
+    width: '90%',
+    backgroundColor: 'white',
+    borderRadius: 8,
+    overflow: 'hidden',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  reservationModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0'
+  },
+  reservationModalTitle: {
+    color: '#333',
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  reservationModalBody: {
+    padding: 15,
+  },
+  reservationInputGroup: {
+    marginBottom: 20,
+  },
+  reservationInputIcon: {
+    position: 'absolute',
+    left: 15,
+    top: 33,
+    zIndex: 1,
+  },
+  reservationInputLabel: {
+    fontSize: 15,
+    fontWeight: '500',
+    marginBottom: 8,
+    color: '#333',
+  },
+  reservationTextInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    height: 45,
+    paddingHorizontal: 15,
+    fontSize: 14,
+  },
+  reservationDateInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    height: 45,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    fontSize: 14,
+  },
+  reservationButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
+    paddingTop: 15,
+  },
+  reservationCancelBtn: {
+    backgroundColor: '#f5f5f5',
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '30%',
+  },
+  reservationCancelBtnText: {
+    color: '#333',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  reservationCreateBtn: {
+    backgroundColor: '#6B3DC9',
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    width: '65%',
+  },
+  reservationCreateBtnText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+    marginLeft: 8,
   },
 }); 
