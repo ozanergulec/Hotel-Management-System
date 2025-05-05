@@ -21,6 +21,15 @@ export default function RoomsScreen() {
   const params = useLocalSearchParams();
   const username = params.username || "Utku Adanur";
   
+  // Get today's date formatted as DD.MM.YYYY
+  const getTodayFormatted = () => {
+    const today = new Date();
+    const day = today.getDate().toString().padStart(2, '0');
+    const month = (today.getMonth() + 1).toString().padStart(2, '0');
+    const year = today.getFullYear();
+    return `${day}.${month}.${year}`;
+  };
+  
   const [activeView, setActiveView] = useState('card'); // 'card' or 'calendar'
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('Tümü');
@@ -30,9 +39,9 @@ export default function RoomsScreen() {
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
   const [showFeaturesDropdown, setShowFeaturesDropdown] = useState(false);
   const [selectedFeatures, setSelectedFeatures] = useState([]);
-  const [startDate, setStartDate] = useState('');
+  const [startDate, setStartDate] = useState(getTodayFormatted()); // Initialize with today's date
   const [endDate, setEndDate] = useState('');
-  const [activeFilters, setActiveFilters] = useState([]);
+  const [activeFilters, setActiveFilters] = useState([{ type: 'startDate', value: getTodayFormatted() }]); // Add today's date as initial filter
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarType, setCalendarType] = useState(''); // 'start' or 'end'
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -102,8 +111,27 @@ export default function RoomsScreen() {
     }
   };
   
-  // Refresh room data
+  // Refresh room data with default today filter
   const refreshRooms = () => {
+    // Reset to today's date
+    const todayDate = getTodayFormatted();
+    
+    // Update start date to today
+    setStartDate(todayDate);
+    
+    // Clear end date
+    setEndDate('');
+    
+    // Update filters to just show today
+    setActiveFilters([{ type: 'startDate', value: todayDate }]);
+    
+    // Reset status filter
+    setStatusFilter('Tümü');
+    
+    // Clear selected features
+    setSelectedFeatures([]);
+    
+    // Fetch rooms (useEffect will trigger this since startDate is changed)
     fetchRooms();
   };
 
@@ -507,10 +535,46 @@ export default function RoomsScreen() {
     if (calendarType === 'start') {
       handleDateChange(formattedDate, 'start');
     } else if (calendarType === 'end') {
+      // Check if end date is after start date
+      if (startDate) {
+        const startDateObj = parseDate(startDate);
+        if (date < startDateObj) {
+          Alert.alert(
+            "Geçersiz Tarih", 
+            "Bitiş tarihi başlangıç tarihinden sonra olmalıdır.",
+            [{ text: "Tamam" }]
+          );
+          return;
+        }
+      }
       handleDateChange(formattedDate, 'end');
     } else if (calendarType === 'reservationStart') {
-      setReservationDates(prev => ({ ...prev, start: formattedDate }));
+      // When selecting reservation start date, update start date and clear end date if needed
+      const newStartDate = formattedDate;
+      setReservationDates(prev => {
+        // If there's an existing end date, check if it's still valid
+        if (prev.end) {
+          const endDateObj = parseDate(prev.end);
+          if (date >= endDateObj) {
+            // End date is now invalid, clear it
+            return { start: newStartDate, end: '' };
+          }
+        }
+        return { ...prev, start: newStartDate };
+      });
     } else if (calendarType === 'reservationEnd') {
+      // When selecting reservation end date, make sure it's after start date
+      if (reservationDates.start) {
+        const startDateObj = parseDate(reservationDates.start);
+        if (date <= startDateObj) {
+          Alert.alert(
+            "Geçersiz Tarih", 
+            "Bitiş tarihi başlangıç tarihinden sonra olmalıdır.",
+            [{ text: "Tamam" }]
+          );
+          return;
+        }
+      }
       setReservationDates(prev => ({ ...prev, end: formattedDate }));
     }
     
@@ -720,6 +784,35 @@ export default function RoomsScreen() {
       return;
     }
     
+    // Parse dates to validate
+    const startDateObj = parseDate(reservationDates.start);
+    const endDateObj = parseDate(reservationDates.end);
+    
+    if (endDateObj <= startDateObj) {
+      Alert.alert(
+        "Geçersiz Tarih Aralığı", 
+        "Bitiş tarihi başlangıç tarihinden sonra olmalıdır.",
+        [{ text: "Tamam" }]
+      );
+      return;
+    }
+    
+    // Validate number of guests against room capacity
+    if (reservationRoom) {
+      const roomCapacity = parseInt(reservationRoom.capacity) || 2;
+      const guestNum = parseInt(numberOfGuests) || 1;
+      
+      if (guestNum > roomCapacity) {
+        Alert.alert(
+          "Kapasite Aşımı", 
+          `Bu oda maksimum ${roomCapacity} kişi kapasitelidir.`,
+          [{ text: "Tamam" }]
+        );
+        setNumberOfGuests(roomCapacity.toString());
+        return;
+      }
+    }
+    
     try {
       setIsLoading(true);
       console.log("Reservation dates:", reservationDates);
@@ -760,19 +853,18 @@ export default function RoomsScreen() {
         // Close modal
         setReservationModalVisible(false);
         
-        // Clear date filters after reservation
-        setStartDate('');
-        setEndDate('');
-        setActiveFilters(activeFilters.filter(filter => 
-          filter.type !== 'startDate' && filter.type !== 'endDate'
-        ));
-        
         // Show confirmation
         Alert.alert(
           'Başarılı', 
           `Oda ${reservationRoom.roomNumber || reservationRoom.id} başarıyla rezerve edildi.`,
-          [{ text: 'Tamam', onPress: () => refreshRooms() }]
+          [{ 
+            text: 'Tamam', 
+            onPress: () => refreshRooms() 
+          }]
         );
+        
+        // Automatically refresh rooms
+        refreshRooms();
       } catch (error) {
         console.error('API error:', error);
         let errorMessage = 'Rezervasyon yapılırken bir hata oluştu.';
@@ -795,6 +887,32 @@ export default function RoomsScreen() {
 
   const renderReservationModal = () => {
     if (!reservationRoom) return null;
+    
+    // Get room capacity as a number
+    const roomCapacity = parseInt(reservationRoom.capacity) || 2;
+    
+    // Validate and update number of guests
+    const handleGuestNumberChange = (value) => {
+      // Remove any non-numeric characters
+      const numericValue = value.replace(/[^0-9]/g, '');
+      
+      // Convert to number (default to 1 if empty)
+      const guestNum = numericValue === '' ? '' : parseInt(numericValue);
+      
+      // Ensure number is not higher than room capacity
+      if (guestNum > roomCapacity) {
+        // If over capacity, set to max capacity
+        setNumberOfGuests(roomCapacity.toString());
+        // Optionally show alert about the limit
+        Alert.alert('Uyarı', `Bu oda maksimum ${roomCapacity} kişi kapasitelidir.`);
+      } else if (guestNum === 0) {
+        // Minimum 1 guest
+        setNumberOfGuests('1');
+      } else {
+        // Valid input
+        setNumberOfGuests(numericValue);
+      }
+    };
     
     return (
       <Modal
@@ -863,15 +981,54 @@ export default function RoomsScreen() {
               {/* Misafir Sayısı */}
               <View style={styles.reservationInputGroup}>
                 <Text style={styles.reservationInputLabel}>
-                  <MaterialIcons name="people" size={18} color="#666" /> Misafir Sayısı:
+                  <MaterialIcons name="people" size={18} color="#666" /> Misafir Sayısı: 
+                  <Text style={styles.capacityInfo}> (Max: {roomCapacity} kişi)</Text>
                 </Text>
-                <TextInput
-                  style={styles.reservationTextInput}
-                  placeholder="Misafir sayısı"
-                  value={numberOfGuests}
-                  onChangeText={setNumberOfGuests}
-                  keyboardType="number-pad"
-                />
+                <View style={styles.guestNumberContainer}>
+                  <TouchableOpacity 
+                    style={styles.guestNumberButton}
+                    onPress={() => {
+                      const currentNum = parseInt(numberOfGuests) || 1;
+                      if (currentNum > 1) {
+                        setNumberOfGuests((currentNum - 1).toString());
+                      }
+                    }}
+                    disabled={numberOfGuests === '1'}
+                  >
+                    <MaterialIcons 
+                      name="remove" 
+                      size={20} 
+                      color={numberOfGuests === '1' ? '#ccc' : '#6B3DC9'} 
+                    />
+                  </TouchableOpacity>
+                  
+                  <TextInput
+                    style={styles.guestNumberInput}
+                    value={numberOfGuests}
+                    onChangeText={handleGuestNumberChange}
+                    keyboardType="number-pad"
+                    maxLength={2}
+                  />
+                  
+                  <TouchableOpacity 
+                    style={styles.guestNumberButton}
+                    onPress={() => {
+                      const currentNum = parseInt(numberOfGuests) || 1;
+                      if (currentNum < roomCapacity) {
+                        setNumberOfGuests((currentNum + 1).toString());
+                      } else {
+                        Alert.alert('Uyarı', `Bu oda maksimum ${roomCapacity} kişi kapasitelidir.`);
+                      }
+                    }}
+                    disabled={parseInt(numberOfGuests) >= roomCapacity}
+                  >
+                    <MaterialIcons 
+                      name="add" 
+                      size={20} 
+                      color={parseInt(numberOfGuests) >= roomCapacity ? '#ccc' : '#6B3DC9'} 
+                    />
+                  </TouchableOpacity>
+                </View>
               </View>
               
               {/* İşlem Butonları */}
@@ -981,7 +1138,20 @@ export default function RoomsScreen() {
 
   const handleReservationDateSelect = () => {
     if (!reservationDates.start || !reservationDates.end) {
-      alert('Lütfen hem giriş hem de çıkış tarihini seçin.');
+      Alert.alert('Uyarı', 'Lütfen hem giriş hem de çıkış tarihini seçin.');
+      return;
+    }
+    
+    // Parse dates to validate
+    const startDateObj = parseDate(reservationDates.start);
+    const endDateObj = parseDate(reservationDates.end);
+    
+    if (endDateObj <= startDateObj) {
+      Alert.alert(
+        "Geçersiz Tarih Aralığı", 
+        "Bitiş tarihi başlangıç tarihinden sonra olmalıdır.",
+        [{ text: "Tamam" }]
+      );
       return;
     }
     
@@ -989,6 +1159,29 @@ export default function RoomsScreen() {
     setCustomerIdNumber('');
     setNumberOfGuests('2');
     setReservationModalVisible(true);
+  };
+
+  // Function to format maintenance completion date (remove time part)
+  const formatMaintenanceDate = (dateString) => {
+    if (!dateString) return "Belirtilmemiş";
+    
+    // Check if dateString contains time (includes T or spaces followed by numbers and colons)
+    if (dateString.includes('T') || /\s\d{1,2}:\d{1,2}/.test(dateString)) {
+      // Extract just the date part
+      const dateParts = dateString.split(/[T\s]/)[0];
+      
+      // If it's in YYYY-MM-DD format, convert to DD.MM.YYYY
+      if (dateParts.includes('-')) {
+        const [year, month, day] = dateParts.split('-');
+        return `${day}.${month}.${year}`;
+      }
+      
+      // If it's already in DD.MM.YYYY format
+      return dateParts;
+    }
+    
+    // If dateString is already just a date
+    return dateString;
   };
 
   const renderRoomCard = ({ item }) => {
@@ -1104,7 +1297,7 @@ export default function RoomsScreen() {
               </View>
               <View style={styles.dateInfoRow}>
                 <MaterialIcons name="event-available" size={18} color="#666" />
-                <Text style={styles.dateInfo}>Tahmini Bitiş: {item.maintenanceCompletionDate || item.expectedCompletion || "Belirtilmemiş"}</Text>
+                <Text style={styles.dateInfo}>Tahmini Bitiş: {formatMaintenanceDate(item.maintenanceCompletionDate || item.expectedCompletion)}</Text>
                 {searchStartDate > today && (
                   <Text style={styles.futureAvailableInfo}> (Seçili tarihte müsait olacak)</Text>
                 )}
@@ -1181,7 +1374,7 @@ export default function RoomsScreen() {
                     <Text style={styles.futureStatusText}>
                       {selectedRoom.futureDateInfo.originalStatus === 'occupied' 
                         ? `Bu oda ${selectedRoom.futureDateInfo.availableFrom} tarihinde boşalacak.`
-                        : `Bu odanın bakımı ${selectedRoom.futureDateInfo.availableFrom} tarihinde tamamlanacak.`
+                        : `Bu odanın bakımı ${formatMaintenanceDate(selectedRoom.futureDateInfo.availableFrom)} tarihinde tamamlanacak.`
                       }
                     </Text>
                   </View>
@@ -1215,7 +1408,7 @@ export default function RoomsScreen() {
                 <View style={styles.maintenanceSection}>
                   <Text style={styles.sectionTitle}>Bakım Bilgileri</Text>
                   <Text style={styles.roomDetailText}>Bakım Sebebi: {selectedRoom.maintenance}</Text>
-                  <Text style={styles.roomDetailText}>Tahmini Bitiş: {selectedRoom.expectedCompletion}</Text>
+                  <Text style={styles.roomDetailText}>Tahmini Bitiş: {formatMaintenanceDate(selectedRoom.expectedCompletion)}</Text>
                 </View>
               )}
               
@@ -1268,12 +1461,23 @@ export default function RoomsScreen() {
         const response = await roomService.cancelReservation(reservationId);
         console.log("Cancellation response:", response);
         
+        // Close modal if open
         setModalVisible(false);
+        
+        // Show success message 
+        Alert.alert(
+          'Başarılı',
+          'Rezervasyon başarıyla iptal edildi.',
+          [{ 
+            text: 'Tamam'
+          }]
+        );
         
         // Başarılı işlem sonrası listeyi yenile
         refreshRooms();
       } else {
         console.error('Reservation ID not found');
+        Alert.alert('Hata', 'Rezervasyon bilgisi bulunamadı.');
       }
     } catch (error) {
       console.error('Error cancelling reservation:', error);
@@ -1284,6 +1488,15 @@ export default function RoomsScreen() {
       } else if (error.message) {
         console.error('Error Message:', error.message);
       }
+      
+      Alert.alert(
+        'İptal Hatası', 
+        'Rezervasyon iptal edilirken bir hata oluştu. Lütfen tekrar deneyin.',
+        [{ 
+          text: 'Tamam', 
+          onPress: () => refreshRooms() 
+        }]
+      );
     } finally {
       setIsLoading(false);
     }
@@ -3323,6 +3536,31 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontSize: 12,
     color: '#444',
+    fontWeight: '500',
+  },
+  capacityInfo: {
+    fontSize: 13,
+    color: '#888',
+    fontStyle: 'italic',
+  },
+  guestNumberContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    height: 45,
+  },
+  guestNumberButton: {
+    width: 45,
+    height: 45,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  guestNumberInput: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 16,
     fontWeight: '500',
   },
 }); 
