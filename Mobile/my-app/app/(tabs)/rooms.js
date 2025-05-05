@@ -371,20 +371,65 @@ export default function RoomsScreen() {
     if (!feature) return 'check';
     
     const lowercaseFeature = feature.toLowerCase();
+    
+    // TV için kontrol
     if (lowercaseFeature.includes('tv')) return 'tv';
-    if (lowercaseFeature.includes('wifi')) return 'network-wifi';
-    if (lowercaseFeature.includes('air') || lowercaseFeature.includes('conditioning')) return 'ac-unit';
-    if (lowercaseFeature.includes('hot') || lowercaseFeature.includes('tub')) return 'hot-tub';
-    if (lowercaseFeature.includes('balcony')) return 'balcony';
-    if (lowercaseFeature.includes('coffee')) return 'coffee';
-    if (lowercaseFeature.includes('minibar')) return 'local-bar';
-    if (lowercaseFeature.includes('sea') || lowercaseFeature.includes('view')) return 'landscape';
-    if (lowercaseFeature.includes('refrigerator') || lowercaseFeature.includes('fridge')) return 'kitchen';
-    if (lowercaseFeature.includes('shower')) return 'shower';
-    if (lowercaseFeature.includes('bathtub')) return 'bathtub';
-    if (lowercaseFeature.includes('safe')) return 'lock';
-    if (lowercaseFeature.includes('desk')) return 'desk';
-    return 'check'; // Varsayılan ikon
+    
+    // Wi-Fi için kontrol
+    if (lowercaseFeature.includes('wifi') || lowercaseFeature.includes('wi-fi')) return 'wifi';
+    
+    // Klima için kontrol
+    if (lowercaseFeature.includes('air') || 
+        lowercaseFeature.includes('conditioning') || 
+        lowercaseFeature.includes('klima')) return 'ac-unit';
+    
+    // Jakuzi için kontrol
+    if (lowercaseFeature.includes('hot') || 
+        lowercaseFeature.includes('tub') || 
+        lowercaseFeature.includes('jacuzzi') || 
+        lowercaseFeature.includes('jakuzi')) return 'hot-tub';
+    
+    // Balkon için kontrol
+    if (lowercaseFeature.includes('balcony') || 
+        lowercaseFeature.includes('balkon')) return 'balcony';
+    
+    // Kahve Makinesi için kontrol
+    if (lowercaseFeature.includes('coffee') || 
+        lowercaseFeature.includes('kahve')) return 'coffee';
+    
+    // Mini Bar için kontrol
+    if (lowercaseFeature.includes('minibar') || 
+        lowercaseFeature.includes('mini bar') || 
+        lowercaseFeature.includes('mini-bar')) return 'local-bar';
+    
+    // Deniz Manzarası için kontrol
+    if (lowercaseFeature.includes('sea') || 
+        lowercaseFeature.includes('view') || 
+        lowercaseFeature.includes('manzara')) return 'landscape';
+    
+    // Buzdolabı için kontrol
+    if (lowercaseFeature.includes('refrigerator') || 
+        lowercaseFeature.includes('fridge') || 
+        lowercaseFeature.includes('buzdolabı')) return 'kitchen';
+    
+    // Duş için kontrol
+    if (lowercaseFeature.includes('shower') || 
+        lowercaseFeature.includes('duş')) return 'shower';
+    
+    // Küvet için kontrol
+    if (lowercaseFeature.includes('bathtub') || 
+        lowercaseFeature.includes('küvet')) return 'bathtub';
+    
+    // Kasa için kontrol
+    if (lowercaseFeature.includes('safe') || 
+        lowercaseFeature.includes('kasa')) return 'lock';
+    
+    // Çalışma Masası için kontrol
+    if (lowercaseFeature.includes('desk') || 
+        lowercaseFeature.includes('çalışma') || 
+        lowercaseFeature.includes('masa')) return 'desktop-mac';
+    
+    return 'star'; // Bilinmeyen özellikler için yıldız ikonu
   };
 
   // Özellik için renk seçimi
@@ -392,13 +437,46 @@ export default function RoomsScreen() {
     if (!feature) return '#666';
     
     const lowercaseFeature = feature.toLowerCase();
-    if (lowercaseFeature.includes('wifi')) return '#0077B6'; // Mavi
-    if (lowercaseFeature.includes('tv')) return '#2E7D32'; // Yeşil
-    if (lowercaseFeature.includes('air') || lowercaseFeature.includes('conditioning')) return '#1E88E5'; // Açık mavi
-    if (lowercaseFeature.includes('hot') || lowercaseFeature.includes('tub')) return '#D81B60'; // Pembe
-    if (lowercaseFeature.includes('balcony')) return '#FF8F00'; // Turuncu
-    if (lowercaseFeature.includes('coffee')) return '#795548'; // Kahverengi
-    if (lowercaseFeature.includes('minibar')) return '#8E24AA'; // Mor
+    
+    // Her özellik için özel renk ata
+    if (lowercaseFeature.includes('wifi') || lowercaseFeature.includes('wi-fi')) 
+      return '#0077B6'; // Mavi
+    
+    if (lowercaseFeature.includes('tv')) 
+      return '#2E7D32'; // Yeşil
+    
+    if (lowercaseFeature.includes('air') || lowercaseFeature.includes('conditioning') || lowercaseFeature.includes('klima')) 
+      return '#00B4D8'; // Açık mavi
+    
+    if (lowercaseFeature.includes('hot') || lowercaseFeature.includes('tub') || lowercaseFeature.includes('jakuzi') || lowercaseFeature.includes('jacuzzi')) 
+      return '#D81B60'; // Pembe
+    
+    if (lowercaseFeature.includes('balcony') || lowercaseFeature.includes('balkon')) 
+      return '#FF9800'; // Turuncu
+    
+    if (lowercaseFeature.includes('coffee') || lowercaseFeature.includes('kahve')) 
+      return '#795548'; // Kahverengi
+    
+    if (lowercaseFeature.includes('minibar') || lowercaseFeature.includes('mini bar') || lowercaseFeature.includes('mini-bar')) 
+      return '#8E24AA'; // Mor
+    
+    if (lowercaseFeature.includes('sea') || lowercaseFeature.includes('view') || lowercaseFeature.includes('manzara')) 
+      return '#039BE5'; // Okyanus mavisi
+    
+    if (lowercaseFeature.includes('refrigerator') || lowercaseFeature.includes('fridge') || lowercaseFeature.includes('buzdolabı')) 
+      return '#26A69A'; // Yeşil-mavi
+    
+    if (lowercaseFeature.includes('shower') || lowercaseFeature.includes('duş')) 
+      return '#29B6F6'; // Açık mavi
+    
+    if (lowercaseFeature.includes('bathtub') || lowercaseFeature.includes('küvet')) 
+      return '#42A5F5'; // Mavi
+    
+    if (lowercaseFeature.includes('safe') || lowercaseFeature.includes('kasa')) 
+      return '#455A64'; // Lacivert-gri
+    
+    if (lowercaseFeature.includes('desk') || lowercaseFeature.includes('çalışma') || lowercaseFeature.includes('masa')) 
+      return '#5D4037'; // Koyu kahverengi
     
     return '#666'; // Varsayılan gri
   };
