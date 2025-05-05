@@ -52,8 +52,8 @@ export default function RoomsScreen() {
   // Room data state
   const [rooms, setRooms] = useState([]);
 
-  // All available features for filtering
-  const availableFeatures = ['TV', 'Wi-Fi', 'Klima', 'Jakuzi', 'Balkon', 'Kahve Mak.', 'Mini Bar'];
+  // All available features for filtering - İngilizce adlar kullan
+  const availableFeatures = ['TV', 'WiFi', 'Air Conditioning', 'Hot Tub', 'Balcony', 'Coffee Machine', 'Minibar'];
 
   // Fetch rooms data from API on component mount
   useEffect(() => {
@@ -140,7 +140,15 @@ export default function RoomsScreen() {
     // Filter by selected features/amenities
     if (selectedFeatures.length > 0) {
       for (const feature of selectedFeatures) {
-        if (!room.amenities.includes(feature)) {
+        // Basit özellik kontrolü - Sadece İngilizce adlarla
+        if (!room.features || !room.features.length) return false;
+        
+        // Odanın bu özelliğe sahip olup olmadığını kontrol et
+        const featureExists = room.features.some(roomFeature => 
+          roomFeature.toLowerCase().includes(feature.toLowerCase())
+        );
+        
+        if (!featureExists) {
           return false;
         }
       }
@@ -308,22 +316,130 @@ export default function RoomsScreen() {
     setActiveFilters(newFilters);
   };
 
-  const handleFeatureToggle = (feature) => {
-    let newSelectedFeatures;
-    if (selectedFeatures.includes(feature)) {
-      // Remove the feature
-      newSelectedFeatures = selectedFeatures.filter(f => f !== feature);
-    } else {
-      // Add the feature
-      newSelectedFeatures = [...selectedFeatures, feature];
+  // Özellik çevirisi için yardımcı fonksiyon
+  const translateFeature = (feature) => {
+    if (!feature) return '';
+    
+    switch (feature.toLowerCase()) {
+      case 'tv': return 'TV';
+      case 'wifi': case 'wi-fi': return 'Wi-Fi';
+      case 'air conditioning': case 'ac': return 'Klima';
+      case 'hot tub': case 'jacuzzi': return 'Jakuzi';
+      case 'balcony': return 'Balkon';
+      case 'coffee machine': case 'coffee maker': return 'Kahve Mak.';
+      case 'minibar': return 'Mini Bar';
+      case 'sea view': return 'Deniz Manzarası';
+      case 'refrigerator': case 'fridge': return 'Buzdolabı';
+      case 'shower': return 'Duş';
+      case 'bathtub': return 'Küvet';
+      case 'safe': return 'Kasa';
+      case 'desk': return 'Çalışma Masası';
+      default: return feature; // Bilinmeyen özellikler için orijinal metni döndür
     }
+  };
+
+  // Özellik ikonu seçimi için yardımcı fonksiyon
+  const getFeatureIcon = (feature) => {
+    if (!feature) return 'check';
+    
+    const lowercaseFeature = feature.toLowerCase();
+    if (lowercaseFeature.includes('tv')) return 'tv';
+    if (lowercaseFeature.includes('wifi')) return 'network-wifi';
+    if (lowercaseFeature.includes('air') || lowercaseFeature.includes('conditioning')) return 'ac-unit';
+    if (lowercaseFeature.includes('hot') || lowercaseFeature.includes('tub')) return 'hot-tub';
+    if (lowercaseFeature.includes('balcony')) return 'balcony';
+    if (lowercaseFeature.includes('coffee')) return 'coffee';
+    if (lowercaseFeature.includes('minibar')) return 'local-bar';
+    if (lowercaseFeature.includes('sea') || lowercaseFeature.includes('view')) return 'landscape';
+    if (lowercaseFeature.includes('refrigerator') || lowercaseFeature.includes('fridge')) return 'kitchen';
+    if (lowercaseFeature.includes('shower')) return 'shower';
+    if (lowercaseFeature.includes('bathtub')) return 'bathtub';
+    if (lowercaseFeature.includes('safe')) return 'lock';
+    if (lowercaseFeature.includes('desk')) return 'desk';
+    return 'check'; // Varsayılan ikon
+  };
+
+  // Özellik için renk seçimi
+  const getFeatureColor = (feature) => {
+    if (!feature) return '#666';
+    
+    const lowercaseFeature = feature.toLowerCase();
+    if (lowercaseFeature.includes('wifi')) return '#0077B6'; // Mavi
+    if (lowercaseFeature.includes('tv')) return '#2E7D32'; // Yeşil
+    if (lowercaseFeature.includes('air') || lowercaseFeature.includes('conditioning')) return '#1E88E5'; // Açık mavi
+    if (lowercaseFeature.includes('hot') || lowercaseFeature.includes('tub')) return '#D81B60'; // Pembe
+    if (lowercaseFeature.includes('balcony')) return '#FF8F00'; // Turuncu
+    if (lowercaseFeature.includes('coffee')) return '#795548'; // Kahverengi
+    if (lowercaseFeature.includes('minibar')) return '#8E24AA'; // Mor
+    
+    return '#666'; // Varsayılan gri
+  };
+
+  // Ekrandaki özellik adını veri tabanındaki ada çeviren yardımcı fonksiyon
+  const getOriginalFeatureName = (displayName) => {
+    switch (displayName.toLowerCase()) {
+      case 'tv': return 'TV';
+      case 'wi-fi': return 'WiFi';
+      case 'klima': return 'Air Conditioning';
+      case 'jakuzi': return 'Hot Tub';
+      case 'balkon': return 'Balcony';
+      case 'kahve mak.': return 'Coffee Machine';
+      case 'mini bar': return 'Minibar';
+      case 'deniz manzarası': return 'Sea View';
+      default: return displayName;
+    }
+  };
+
+  // Özellik bulmak için yardımcı fonksiyon 
+  const findFeatureByName = (features, featureName) => {
+    if (!features || !features.length) return false;
+    
+    // Türkçe ya da İngilizce isimle arama yap
+    const lowercaseFeatureName = featureName.toLowerCase();
+    return features.some(feature => {
+      // Hem orijinal isme hem de çevrilmiş isme bak
+      const translatedName = translateFeature(feature).toLowerCase();
+      return feature.toLowerCase().includes(lowercaseFeatureName) || 
+             translatedName.includes(lowercaseFeatureName);
+    });
+  };
+
+  // Özelliğin seçili olup olmadığını kontrol et (sadece İngilizce)
+  const isFeatureSelected = (feature) => {
+    if (!selectedFeatures || !selectedFeatures.length) return false;
+    return selectedFeatures.some(selectedFeature => 
+      selectedFeature.toLowerCase() === feature.toLowerCase()
+    );
+  };
+  
+  const handleFeatureToggle = (feature) => {
+    // Önce mevcut seçili özellikleri al
+    let newSelectedFeatures = [...selectedFeatures];
+    
+    // Özelliğin zaten seçili olup olmadığını kontrol et
+    const index = newSelectedFeatures.findIndex(
+      f => f.toLowerCase() === feature.toLowerCase()
+    );
+    
+    if (index !== -1) {
+      // Özellik zaten seçili, kaldır
+      newSelectedFeatures.splice(index, 1);
+    } else {
+      // Özellik seçili değil, ekle
+      newSelectedFeatures.push(feature);
+    }
+    
     setSelectedFeatures(newSelectedFeatures);
     
-    // Update active filters
-    const newFilters = [...activeFilters.filter(f => f.type !== 'feature' || !f.value.includes(feature))];
-    if (!selectedFeatures.includes(feature)) {
+    // Aktif filtreleri güncelle
+    const newFilters = [...activeFilters.filter(f => 
+      f.type !== 'feature' || f.value !== feature
+    )];
+    
+    if (index === -1) {
       newFilters.push({ type: 'feature', value: feature });
     }
+    
     setActiveFilters(newFilters);
   };
 
@@ -372,6 +488,8 @@ export default function RoomsScreen() {
     setStartDate('');
     setEndDate('');
     setActiveFilters([]);
+    setShowStatusDropdown(false);
+    setShowFeaturesDropdown(false);
   };
   
   const openCalendar = (type) => {
@@ -1493,9 +1611,9 @@ export default function RoomsScreen() {
                     >
                       <View style={[
                         styles.checkbox,
-                        selectedFeatures.includes(feature) && styles.checkedBox
+                        isFeatureSelected(feature) && styles.checkedBox
                       ]}>
-                        {selectedFeatures.includes(feature) && (
+                        {isFeatureSelected(feature) && (
                           <MaterialIcons name="check" size={14} color="white" />
                         )}
                       </View>
@@ -1537,65 +1655,6 @@ export default function RoomsScreen() {
         </View>
       </Modal>
     );
-  };
-
-  // Özellik çevirisi için yardımcı fonksiyon
-  const translateFeature = (feature) => {
-    if (!feature) return '';
-    
-    switch (feature.toLowerCase()) {
-      case 'tv': return 'TV';
-      case 'wifi': case 'wi-fi': return 'Wi-Fi';
-      case 'air conditioning': case 'ac': return 'Klima';
-      case 'hot tub': case 'jacuzzi': return 'Jakuzi';
-      case 'balcony': return 'Balkon';
-      case 'coffee machine': case 'coffee maker': return 'Kahve Mak.';
-      case 'minibar': return 'Mini Bar';
-      case 'sea view': return 'Deniz Manzarası';
-      case 'refrigerator': case 'fridge': return 'Buzdolabı';
-      case 'shower': return 'Duş';
-      case 'bathtub': return 'Küvet';
-      case 'safe': return 'Kasa';
-      case 'desk': return 'Çalışma Masası';
-      default: return feature; // Bilinmeyen özellikler için orijinal metni döndür
-    }
-  };
-
-  // Özellik ikonu seçimi için yardımcı fonksiyon
-  const getFeatureIcon = (feature) => {
-    if (!feature) return 'check';
-    
-    const lowercaseFeature = feature.toLowerCase();
-    if (lowercaseFeature.includes('tv')) return 'tv';
-    if (lowercaseFeature.includes('wifi') || lowercaseFeature.includes('wi-fi')) return 'network-wifi';
-    if (lowercaseFeature.includes('air') || lowercaseFeature.includes('klima') || lowercaseFeature.includes('ac')) return 'ac-unit';
-    if (lowercaseFeature.includes('hot') || lowercaseFeature.includes('jacuzzi') || lowercaseFeature.includes('jakuzi')) return 'hot-tub';
-    if (lowercaseFeature.includes('balcony') || lowercaseFeature.includes('balkon')) return 'balcony';
-    if (lowercaseFeature.includes('coffee') || lowercaseFeature.includes('kahve')) return 'coffee';
-    if (lowercaseFeature.includes('minibar') || lowercaseFeature.includes('mini bar')) return 'local-bar';
-    if (lowercaseFeature.includes('sea') || lowercaseFeature.includes('deniz') || lowercaseFeature.includes('manzara')) return 'landscape';
-    if (lowercaseFeature.includes('refrigerator') || lowercaseFeature.includes('fridge') || lowercaseFeature.includes('buzdolabı')) return 'kitchen';
-    if (lowercaseFeature.includes('shower') || lowercaseFeature.includes('duş')) return 'shower';
-    if (lowercaseFeature.includes('bathtub') || lowercaseFeature.includes('küvet')) return 'bathtub';
-    if (lowercaseFeature.includes('safe') || lowercaseFeature.includes('kasa')) return 'lock';
-    if (lowercaseFeature.includes('desk') || lowercaseFeature.includes('çalışma') || lowercaseFeature.includes('masa')) return 'desk';
-    return 'check'; // Varsayılan ikon
-  };
-
-  // Özellik için renk seçimi
-  const getFeatureColor = (feature) => {
-    if (!feature) return '#666';
-    
-    const lowercaseFeature = feature.toLowerCase();
-    if (lowercaseFeature.includes('wifi') || lowercaseFeature.includes('wi-fi')) return '#0077B6'; // Mavi
-    if (lowercaseFeature.includes('tv')) return '#2E7D32'; // Yeşil
-    if (lowercaseFeature.includes('air') || lowercaseFeature.includes('klima') || lowercaseFeature.includes('ac')) return '#1E88E5'; // Açık mavi
-    if (lowercaseFeature.includes('hot') || lowercaseFeature.includes('jakuzi')) return '#D81B60'; // Pembe
-    if (lowercaseFeature.includes('balcony') || lowercaseFeature.includes('balkon')) return '#FF8F00'; // Turuncu
-    if (lowercaseFeature.includes('coffee') || lowercaseFeature.includes('kahve')) return '#795548'; // Kahverengi
-    if (lowercaseFeature.includes('minibar') || lowercaseFeature.includes('mini bar')) return '#8E24AA'; // Mor
-    
-    return '#666'; // Varsayılan gri
   };
 
   return (
@@ -1861,9 +1920,9 @@ export default function RoomsScreen() {
                       <View style={styles.checkboxContainer}>
                         <View style={[
                           styles.checkbox,
-                          selectedFeatures.includes(feature) && styles.checkedBox
+                          isFeatureSelected(feature) && styles.checkedBox
                         ]}>
-                          {selectedFeatures.includes(feature) && (
+                          {isFeatureSelected(feature) && (
                             <MaterialIcons name="check" size={14} color="white" />
                           )}
                         </View>
