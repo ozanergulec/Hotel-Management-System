@@ -969,6 +969,14 @@ export default function RoomsScreen() {
                   <Text style={styles.futureAvailableInfo}> (Seçili tarihte müsait olacak)</Text>
                 )}
               </View>
+              
+              <TouchableOpacity 
+                style={styles.cancelReservationBtn}
+                onPress={() => handleCancelReservation(item)}
+              >
+                <MaterialIcons name="cancel" size={16} color="#E53935" />
+                <Text style={styles.cancelReservationText}>REZERVASYONU İPTAL ET</Text>
+              </TouchableOpacity>
             </View>
           )}
           
@@ -1133,47 +1141,39 @@ export default function RoomsScreen() {
   };
 
   // Function to handle reservation cancellation
-  const handleCancelReservation = (room) => {
-    // Show confirmation dialog using React Native's Alert
-    Alert.alert(
-      "Rezervasyon İptali",
-      `${room.guest} adına yapılan rezervasyonu iptal etmek istediğinizden emin misiniz?`,
-      [
-        {
-          text: "İptal",
-          style: "cancel"
-        },
-        {
-          text: "Evet, İptal Et",
-          onPress: async () => {
-            try {
-              setIsLoading(true);
-              
-              // Call API to cancel reservation
-              if (room.reservationId) {
-                await roomService.cancelReservation(room.reservationId);
-                
-                setModalVisible(false);
-                
-                // Show success message and refresh
-                Alert.alert(
-                  "Rezervasyon İptal Edildi",
-                  `Oda ${room.id} rezervasyonu başarıyla iptal edildi.`,
-                  [{ text: 'Tamam', onPress: () => refreshRooms() }]
-                );
-              } else {
-                throw new Error('Reservation ID not found');
-              }
-            } catch (error) {
-              console.error('Error cancelling reservation:', error);
-              Alert.alert('Hata', 'Rezervasyon iptal edilirken bir hata oluştu.');
-            } finally {
-              setIsLoading(false);
-            }
-          }
-        }
-      ]
-    );
+  const handleCancelReservation = async (room) => {
+    try {
+      setIsLoading(true);
+      
+      // Call API to cancel reservation
+      if (room.reservationId || room.currentReservationId) {
+        // Gerçek rezervasyon ID'sini al
+        const reservationId = room.reservationId || room.currentReservationId;
+        console.log("Cancelling reservation ID:", reservationId);
+        
+        // API'yi çağır
+        const response = await roomService.cancelReservation(reservationId);
+        console.log("Cancellation response:", response);
+        
+        setModalVisible(false);
+        
+        // Başarılı işlem sonrası listeyi yenile
+        refreshRooms();
+      } else {
+        console.error('Reservation ID not found');
+      }
+    } catch (error) {
+      console.error('Error cancelling reservation:', error);
+      
+      // Log error details for debugging
+      if (error.response?.data?.message) {
+        console.error('API Error:', error.response.data.message);
+      } else if (error.message) {
+        console.error('Error Message:', error.message);
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Function to get calendar view data from API
@@ -2983,5 +2983,22 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     marginLeft: 8,
+  },
+  cancelReservationBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FEE8E7',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 5,
+    marginTop: 10,
+    alignSelf: 'flex-start',
+  },
+  cancelReservationText: {
+    color: '#E53935',
+    fontSize: 12,
+    fontWeight: '500',
+    marginLeft: 5,
   },
 }); 
