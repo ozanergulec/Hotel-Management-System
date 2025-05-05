@@ -53,7 +53,7 @@ export default function RoomsScreen() {
   const [rooms, setRooms] = useState([]);
 
   // All available features for filtering
-  const availableFeatures = ['TV', 'Minibar', 'Wi-Fi', 'Balkon', 'Deniz Manzarası', 'Jakuzi'];
+  const availableFeatures = ['TV', 'Wi-Fi', 'Klima', 'Jakuzi', 'Balkon', 'Kahve Mak.', 'Mini Bar'];
 
   // Fetch rooms data from API on component mount
   useEffect(() => {
@@ -920,25 +920,23 @@ export default function RoomsScreen() {
         </View>
         
         <View style={styles.roomContent}>
+          {/* Özellik İkonları Satırı */}
           <View style={styles.amenitiesRow}>
-            {item.features && item.features.map((feature, index) => (
-              <View key={index} style={styles.amenityItem}>
-                <MaterialIcons 
-                  name={
-                    feature === 'TV' ? 'tv' : 
-                    feature === 'Minibar' ? 'kitchen' : 
-                    feature === 'Wi-Fi' ? 'wifi' :
-                    feature === 'Air Conditioning' ? 'ac-unit' :
-                    feature === 'Balkon' ? 'balcony' :
-                    feature === 'Deniz Manzarası' ? 'landscape' :
-                    feature === 'Jakuzi' ? 'hot-tub' : 'check'
-                  } 
-                  size={18} 
-                  color="#555" 
-                />
-                <Text style={styles.amenityItemText}>{feature}</Text>
-              </View>
-            ))}
+            {item.features && item.features.map((feature, index) => {
+              // Bu Wi-Fi özelliği mi kontrol et
+              const isWifi = feature.toLowerCase().includes('wifi') || feature.toLowerCase().includes('wi-fi');
+              
+              return (
+                <View key={index} style={styles.featureIconContainer}>
+                  <MaterialIcons 
+                    name={getFeatureIcon(feature)}
+                    size={isWifi ? 20 : 18} 
+                    color={getFeatureColor(feature)} 
+                  />
+                  <Text style={[styles.featureIconText, { color: getFeatureColor(feature) }]}>{translateFeature(feature)}</Text>
+                </View>
+              );
+            })}
           </View>
           
           {displayStatus === 'available' && (
@@ -1106,24 +1104,21 @@ export default function RoomsScreen() {
               <View style={styles.amenitiesSection}>
                 <Text style={styles.sectionTitle}>Oda Özellikleri</Text>
                 <View style={styles.amenitiesList}>
-                  {selectedRoom.features && selectedRoom.features.map((item, index) => (
-                    <View key={index} style={styles.amenityBadge}>
-                      <MaterialIcons 
-                        name={
-                          item === 'TV' ? 'tv' : 
-                          item === 'Minibar' ? 'kitchen' : 
-                          item === 'Wi-Fi' ? 'wifi' :
-                          item === 'Air Conditioning' ? 'ac-unit' :
-                          item === 'Balkon' ? 'balcony' :
-                          item === 'Deniz Manzarası' ? 'landscape' :
-                          item === 'Jakuzi' ? 'hot-tub' : 'check'
-                        } 
-                        size={16} 
-                        color="#6B3DC9" 
-                      />
-                      <Text style={styles.amenityText}>{item}</Text>
-                    </View>
-                  ))}
+                  {selectedRoom.features && selectedRoom.features.map((item, index) => {
+                    // Bu Wi-Fi özelliği mi kontrol et
+                    const isWifi = item.toLowerCase().includes('wifi') || item.toLowerCase().includes('wi-fi');
+                    
+                    return (
+                      <View key={index} style={styles.amenityBadge}>
+                        <MaterialIcons 
+                          name={getFeatureIcon(item)} 
+                          size={isWifi ? 18 : 16} 
+                          color={getFeatureColor(item)} 
+                        />
+                        <Text style={[styles.amenityText, { color: getFeatureColor(item) }]}>{translateFeature(item)}</Text>
+                      </View>
+                    );
+                  })}
                 </View>
               </View>
               
@@ -1431,6 +1426,176 @@ export default function RoomsScreen() {
         </View>
       </View>
     );
+  };
+
+  // Gelişmiş filtreler modalı
+  const renderAdvancedFiltersModal = () => {
+    return (
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showFilters}
+        onRequestClose={() => setShowFilters(false)}
+      >
+        <View style={styles.modalFilterContainer}>
+          <View style={styles.modalFilterContent}>
+            <View style={styles.modalFilterHeader}>
+              <Text style={styles.modalFilterTitle}>Gelişmiş Filtreler</Text>
+              <TouchableOpacity onPress={() => setShowFilters(false)}>
+                <MaterialIcons name="close" size={24} color="white" />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView 
+              style={styles.filterScrollView} 
+              showsVerticalScrollIndicator={true}
+            >
+              <View style={styles.dateFilterSection}>
+                <Text style={styles.dateLabel}>Tarih Aralığı</Text>
+                
+                <View style={styles.dateFilterRow}>
+                  <View style={{width: '48%'}}>
+                    <Text style={styles.smallLabel}>Başlangıç Tarihi</Text>
+                    <TouchableOpacity 
+                      style={styles.dateInput}
+                      onPress={() => openCalendar('start')}
+                    >
+                      <Text>{startDate || 'GG.AA.YYYY'}</Text>
+                      <MaterialIcons name="calendar-today" size={16} color="#333" />
+                    </TouchableOpacity>
+                  </View>
+                  
+                  <View style={{width: '48%'}}>
+                    <Text style={styles.smallLabel}>Bitiş Tarihi</Text>
+                    <TouchableOpacity 
+                      style={styles.dateInput}
+                      onPress={() => openCalendar('end')}
+                    >
+                      <Text>{endDate || 'GG.AA.YYYY'}</Text>
+                      <MaterialIcons name="calendar-today" size={16} color="#333" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+              
+              <View style={styles.featureFilterSection}>
+                <Text style={styles.featureLabel}>Oda Özellikleri</Text>
+                
+                {availableFeatures.map((feature) => {
+                  // Bu Wi-Fi özelliği mi kontrol et
+                  const isWifi = feature.toLowerCase().includes('wifi') || feature.toLowerCase().includes('wi-fi');
+                  
+                  return (
+                    <TouchableOpacity 
+                      key={feature}
+                      style={styles.featureCheckItem}
+                      onPress={() => handleFeatureToggle(feature)}
+                    >
+                      <View style={[
+                        styles.checkbox,
+                        selectedFeatures.includes(feature) && styles.checkedBox
+                      ]}>
+                        {selectedFeatures.includes(feature) && (
+                          <MaterialIcons name="check" size={14} color="white" />
+                        )}
+                      </View>
+                      <MaterialIcons 
+                        name={getFeatureIcon(feature)} 
+                        size={isWifi ? 22 : 20} 
+                        color={getFeatureColor(feature)} 
+                        style={{marginRight: 8, marginLeft: 8}}
+                      />
+                      <Text style={[
+                        styles.featureItemText, 
+                        isWifi ? {color: getFeatureColor(feature), fontWeight: '600'} : null
+                      ]}>{translateFeature(feature)}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+            
+            <View style={styles.modalFilterActions}>
+              <TouchableOpacity 
+                style={styles.clearFiltersButton}
+                onPress={() => {
+                  clearAllFilters();
+                  setShowFilters(false);
+                }}
+              >
+                <Text style={styles.clearFiltersText}>FİLTRELERİ TEMİZLE</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.applyFiltersButton}
+                onPress={() => setShowFilters(false)}
+              >
+                <Text style={styles.applyFiltersText}>UYGULA</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    );
+  };
+
+  // Özellik çevirisi için yardımcı fonksiyon
+  const translateFeature = (feature) => {
+    if (!feature) return '';
+    
+    switch (feature.toLowerCase()) {
+      case 'tv': return 'TV';
+      case 'wifi': case 'wi-fi': return 'Wi-Fi';
+      case 'air conditioning': case 'ac': return 'Klima';
+      case 'hot tub': case 'jacuzzi': return 'Jakuzi';
+      case 'balcony': return 'Balkon';
+      case 'coffee machine': case 'coffee maker': return 'Kahve Mak.';
+      case 'minibar': return 'Mini Bar';
+      case 'sea view': return 'Deniz Manzarası';
+      case 'refrigerator': case 'fridge': return 'Buzdolabı';
+      case 'shower': return 'Duş';
+      case 'bathtub': return 'Küvet';
+      case 'safe': return 'Kasa';
+      case 'desk': return 'Çalışma Masası';
+      default: return feature; // Bilinmeyen özellikler için orijinal metni döndür
+    }
+  };
+
+  // Özellik ikonu seçimi için yardımcı fonksiyon
+  const getFeatureIcon = (feature) => {
+    if (!feature) return 'check';
+    
+    const lowercaseFeature = feature.toLowerCase();
+    if (lowercaseFeature.includes('tv')) return 'tv';
+    if (lowercaseFeature.includes('wifi') || lowercaseFeature.includes('wi-fi')) return 'network-wifi';
+    if (lowercaseFeature.includes('air') || lowercaseFeature.includes('klima') || lowercaseFeature.includes('ac')) return 'ac-unit';
+    if (lowercaseFeature.includes('hot') || lowercaseFeature.includes('jacuzzi') || lowercaseFeature.includes('jakuzi')) return 'hot-tub';
+    if (lowercaseFeature.includes('balcony') || lowercaseFeature.includes('balkon')) return 'balcony';
+    if (lowercaseFeature.includes('coffee') || lowercaseFeature.includes('kahve')) return 'coffee';
+    if (lowercaseFeature.includes('minibar') || lowercaseFeature.includes('mini bar')) return 'local-bar';
+    if (lowercaseFeature.includes('sea') || lowercaseFeature.includes('deniz') || lowercaseFeature.includes('manzara')) return 'landscape';
+    if (lowercaseFeature.includes('refrigerator') || lowercaseFeature.includes('fridge') || lowercaseFeature.includes('buzdolabı')) return 'kitchen';
+    if (lowercaseFeature.includes('shower') || lowercaseFeature.includes('duş')) return 'shower';
+    if (lowercaseFeature.includes('bathtub') || lowercaseFeature.includes('küvet')) return 'bathtub';
+    if (lowercaseFeature.includes('safe') || lowercaseFeature.includes('kasa')) return 'lock';
+    if (lowercaseFeature.includes('desk') || lowercaseFeature.includes('çalışma') || lowercaseFeature.includes('masa')) return 'desk';
+    return 'check'; // Varsayılan ikon
+  };
+
+  // Özellik için renk seçimi
+  const getFeatureColor = (feature) => {
+    if (!feature) return '#666';
+    
+    const lowercaseFeature = feature.toLowerCase();
+    if (lowercaseFeature.includes('wifi') || lowercaseFeature.includes('wi-fi')) return '#0077B6'; // Mavi
+    if (lowercaseFeature.includes('tv')) return '#2E7D32'; // Yeşil
+    if (lowercaseFeature.includes('air') || lowercaseFeature.includes('klima') || lowercaseFeature.includes('ac')) return '#1E88E5'; // Açık mavi
+    if (lowercaseFeature.includes('hot') || lowercaseFeature.includes('jakuzi')) return '#D81B60'; // Pembe
+    if (lowercaseFeature.includes('balcony') || lowercaseFeature.includes('balkon')) return '#FF8F00'; // Turuncu
+    if (lowercaseFeature.includes('coffee') || lowercaseFeature.includes('kahve')) return '#795548'; // Kahverengi
+    if (lowercaseFeature.includes('minibar') || lowercaseFeature.includes('mini bar')) return '#8E24AA'; // Mor
+    
+    return '#666'; // Varsayılan gri
   };
 
   return (
@@ -1807,6 +1972,9 @@ export default function RoomsScreen() {
         
         {/* Reservation Date Modal */}
         {renderReservationDateModal()}
+        
+        {/* Gelişmiş filtreler modalı */}
+        {renderAdvancedFiltersModal()}
       </View>
     </SafeAreaView>
   );
@@ -2047,19 +2215,24 @@ const styles = StyleSheet.create({
   },
   amenitiesRow: {
     flexDirection: 'row',
-    marginBottom: 10,
     flexWrap: 'wrap',
+    marginBottom: 15,
+    marginTop: 5,
   },
   amenityItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 15,
+    marginRight: 10,
     marginBottom: 8,
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
   },
   amenityItemText: {
-    marginLeft: 5,
-    fontSize: 13,
-    color: '#555',
+    marginLeft: 4,
+    fontSize: 12,
+    color: '#333',
   },
   priceContainer: {
     marginTop: 8,
@@ -2231,6 +2404,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginRight: 10,
     marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#e0daea',
   },
   amenityText: {
     color: '#6B3DC9',
@@ -2292,21 +2467,25 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   featureCheckItem: {
-    padding: 10,
+    padding: 12,
+    paddingVertical: 15,
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
-  },
-  checkboxContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 5,
+  },
+  featureItemText: {
+    color: '#333',
+    fontSize: 15,
+    fontWeight: '500',
   },
   checkbox: {
-    width: 20,
-    height: 20,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 5,
-    marginRight: 10,
+    width: 22,
+    height: 22,
+    borderWidth: 2,
+    borderColor: '#6B3DC9',
+    borderRadius: 4,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -2314,8 +2493,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#6B3DC9',
     borderColor: '#6B3DC9',
   },
-  featureItemText: {
-    color: '#333',
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   filterActions: {
     flexDirection: 'row',
@@ -3000,5 +3180,90 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     marginLeft: 5,
+  },
+  modalFilterContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalFilterContent: {
+    width: '90%',
+    maxHeight: '90%',
+    backgroundColor: 'white',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  modalFilterHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#6B3DC9',
+    padding: 15,
+  },
+  modalFilterTitle: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  filterScrollView: {
+    padding: 15,
+    maxHeight: '70%',
+  },
+  dateFilterSection: {
+    marginBottom: 20,
+  },
+  featureFilterSection: {
+    marginBottom: 20,
+  },
+  modalFilterActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    backgroundColor: 'white',
+  },
+  featureCheckItem: {
+    padding: 12,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  dateFilterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  featureIconsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 15,
+    marginTop: 5,
+  },
+  featureIconContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 12,
+    marginBottom: 8,
+    backgroundColor: '#f9f9f9',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#eee',
+    minWidth: 80,
+    justifyContent: 'center',
+  },
+  featureIconText: {
+    marginLeft: 4,
+    fontSize: 12,
+    color: '#444',
+    fontWeight: '500',
   },
 }); 
