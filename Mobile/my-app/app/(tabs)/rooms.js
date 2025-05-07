@@ -1005,6 +1005,15 @@ export default function RoomsScreen() {
         const response = await roomService.reserveRoom(reservationData);
         console.log("Reservation response:", response);
         
+        // Rezervasyon başarılı olduktan hemen sonra güncel verileri yükle
+        if (activeView === 'calendar') {
+          console.log('Rezervasyon sonrası takvim verilerini hemen yeniliyorum...');
+          await fetchCalendarViewData(); // Takvim verilerini hemen yenile
+        } else {
+          console.log('Rezervasyon sonrası kart görünümü verilerini hemen yeniliyorum...');
+          await fetchRooms(); // Kart görünümü verilerini hemen yenile
+        }
+        
         // Close modal
         setReservationModalVisible(false);
         
@@ -1014,12 +1023,18 @@ export default function RoomsScreen() {
           `Oda ${reservationRoom.roomNumber || reservationRoom.id} başarıyla rezerve edildi.`,
           [{ 
             text: 'Tamam', 
-            onPress: () => refreshRooms() 
+            onPress: () => {
+              // Aktif görünüme göre farklı yenileme fonksiyonunu çağır
+              if (activeView === 'calendar') {
+                console.log('Rezervasyon sonrası takvim verilerini yeniliyorum...');
+                fetchCalendarViewData(); // Takvim görünümü için veri yenileme
+              } else {
+                console.log('Rezervasyon sonrası kart görünümü verilerini yeniliyorum...');
+                refreshRooms(); // Kart görünümü için veri yenileme
+              }
+            }
           }]
         );
-        
-        // Automatically refresh rooms
-        refreshRooms();
       } catch (error) {
         console.error('API error:', error);
         let errorMessage = 'Rezervasyon yapılırken bir hata oluştu.';
@@ -1667,15 +1682,34 @@ export default function RoomsScreen() {
         const response = await roomService.cancelReservation(reservationId);
         console.log("Cancellation response:", response);
 
+        // Rezervasyon iptali başarılı olduktan hemen sonra güncel verileri yükle
+        if (activeView === 'calendar') {
+          console.log('Rezervasyon iptali sonrası takvim verilerini hemen yeniliyorum...');
+          await fetchCalendarViewData(); // Takvim verilerini hemen yenile
+        } else {
+          console.log('Rezervasyon iptali sonrası kart görünümü verilerini hemen yeniliyorum...');
+          await fetchRooms(); // Kart görünümü verilerini hemen yenile
+        }
+
         setModalVisible(false);
 
         Alert.alert(
           'Başarılı',
           'Rezervasyon başarıyla iptal edildi.',
-          [{ text: 'Tamam' }]
+          [{ 
+            text: 'Tamam',
+            onPress: () => {
+              // Aktif görünüme göre farklı yenileme fonksiyonunu çağır
+              if (activeView === 'calendar') {
+                console.log('Rezervasyon iptali sonrası takvim verilerini yeniliyorum...');
+                fetchCalendarViewData(); // Takvim görünümü için veri yenileme
+              } else {
+                console.log('Rezervasyon iptali sonrası kart görünümü verilerini yeniliyorum...');
+                refreshRooms(); // Kart görünümü için veri yenileme
+              }
+            }
+          }]
         );
-
-        refreshRooms();
       } else {
         console.error('Reservation ID not found');
         Alert.alert('Hata', 'Rezervasyon bilgisi bulunamadı.');
@@ -1692,7 +1726,14 @@ export default function RoomsScreen() {
         'Rezervasyon iptal edilirken bir hata oluştu. Lütfen tekrar deneyin.',
         [{
           text: 'Tamam',
-          onPress: () => refreshRooms()
+          onPress: () => {
+            // Aktif görünüme göre farklı yenileme fonksiyonunu çağır
+            if (activeView === 'calendar') {
+              fetchCalendarViewData();
+            } else {
+              refreshRooms();
+            }
+          }
         }]
       );
     } finally {
