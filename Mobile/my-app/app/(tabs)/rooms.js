@@ -167,7 +167,7 @@ export default function RoomsScreen() {
   // Filter the rooms based on search text, status filter, and other filters
   const filteredRooms = rooms.filter(room => {
     // Filter by search text (room number)
-    if (searchText && !room.id.toLowerCase().includes(searchText.toLowerCase())) {
+    if (searchText && !room.roomNumber?.toLowerCase().includes(searchText.toLowerCase())) {
       return false;
     }
     
@@ -856,6 +856,8 @@ export default function RoomsScreen() {
   const handleReservation = (room, selectedDate = null) => {
     // Log room object to help debug
     console.log("Room for reservation:", JSON.stringify(room, null, 2));
+    console.log("DEBUG - handleReservation - Room ID:", room.id, "Room Number:", room.roomNumber);
+    
     // If we have a selected date from calendar view, use it
     if (selectedDate) {
       const formatDateString = (date) => {
@@ -873,7 +875,7 @@ export default function RoomsScreen() {
       // Set up the reservation with pre-filled dates
       setReservationRoom({
         ...room,
-        id: room.id || room.roomId || 0 // Oda ID'si mutlaka olsun
+        id: room.id // Doğrudan room.id kullan, fallback yok
       });
       setReservationDates({ start: startDateStr, end: endDateStr });
       setCustomerIdNumber('');
@@ -884,14 +886,14 @@ export default function RoomsScreen() {
       if (!startDate || !endDate) {
         setReservationRoom({
           ...room,
-          id: room.id || room.roomId || 0
+          id: room.id // Doğrudan room.id kullan, fallback yok
         });
         setReservationDates({ start: '', end: '' });
         setShowReservationDateModal(true);
       } else {
         setReservationRoom({
           ...room,
-          id: room.id || room.roomId || 0
+          id: room.id // Doğrudan room.id kullan, fallback yok
         });
         setReservationDates({ start: startDate, end: endDate });
         setCustomerIdNumber('');
@@ -985,12 +987,16 @@ export default function RoomsScreen() {
       
       // Create reservation payload
       const reservationData = {
-        roomId: reservationRoom.id,
+        roomId: reservationRoom.roomId || reservationRoom.id,
         customerIdNumber: customerIdNumber.trim(),
         checkInDate: formatDateForApi(reservationDates.start),
         checkOutDate: formatDateForApi(reservationDates.end),
         numberOfGuests: parseInt(numberOfGuests) || 1
       };
+      
+      // Debug - API'ye gönderilen oda ID'si
+      console.log("DEBUG - confirmReservation - Room ID:", reservationRoom.roomId || reservationRoom.id);
+      console.log("DEBUG - confirmReservation - Full room object:", JSON.stringify(reservationRoom, null, 2));
       
       console.log("Sending reservation data:", reservationData);
       
@@ -1888,7 +1894,23 @@ export default function RoomsScreen() {
   // Modify the renderCalendarView function to display daily statuses
   const renderCalendarView = () => {
     const dates = generateCalendarDates();
-    const filteredRoomsByNumber = [...filteredRooms].sort((a, b) => parseInt(a.id) - parseInt(b.id));
+    
+    // Debug room data
+    console.log("Calendar rooms data:", filteredRooms.map(r => ({
+      roomId: r.roomId,
+      id: r.id,
+      roomNumber: r.roomNumber
+    })));
+    
+    // Önce roomId, sonra id, sonra roomNumber'a göre sırala
+    const filteredRoomsByNumber = [...filteredRooms].sort((a, b) => {
+      // Önce roomId'ye göre sırala
+      if (a.roomId && b.roomId) return parseInt(a.roomId) - parseInt(b.roomId);
+      // roomId yoksa id'ye göre sırala
+      if (a.id && b.id) return parseInt(a.id) - parseInt(b.id);
+      // İkisi de yoksa roomNumber'a göre sırala
+      return parseInt(a.roomNumber || 0) - parseInt(b.roomNumber || 0);
+    });
     
     if (isLoading) {
       return (
@@ -1951,8 +1973,8 @@ export default function RoomsScreen() {
             
             {/* Room Rows */}
             <ScrollView style={{ maxHeight: 550 }}>
-              {filteredRoomsByNumber.map((room) => (
-                <View key={room.id} style={styles.roomRow}>
+              {filteredRoomsByNumber.map((room, roomIndex) => (
+                <View key={`room-${room.roomId || room.id || room.roomNumber}-${roomIndex}`} style={styles.roomRow}>
                   <View style={styles.roomNumberCell}>
                     <Text style={styles.roomNumberText}>{room.roomNumber}</Text>
                     <Text style={styles.roomTypeIndicator}>{room.roomType}</Text>
@@ -1980,7 +2002,7 @@ export default function RoomsScreen() {
                     
                     return (
                       <TouchableOpacity 
-                        key={`cal-cell-${room.id}-${dateIndex}`} 
+                        key={`cell-${room.roomNumber || roomIndex}-${dateIndex}`} 
                         style={[
                           styles.roomStatusCell,
                           { backgroundColor: getStatusColor(status) }
@@ -1995,10 +2017,19 @@ export default function RoomsScreen() {
                             // Create a copy of the room with reservation info for the popup
                             const roomForReservation = {
                               ...room,
+                              id: room.roomId || room.id || parseInt(room.roomNumber) || 0, // Önce roomId değerini kullan
                               status: 'available',
                               selectedDate: selectedDateStr,
                               formattedDate: formattedDate
                             };
+                            
+                            // Debug - takvim görünümünde tıklanan oda
+                            console.log("Calendar view clicked room:", JSON.stringify({
+                              roomId: room.roomId,
+                              originalId: room.id,
+                              newId: roomForReservation.id,
+                              roomNumber: room.roomNumber
+                            }, null, 2));
                             
                             // Show room details with reservation option
                             showRoomDetailsForReservation(roomForReservation, date);
