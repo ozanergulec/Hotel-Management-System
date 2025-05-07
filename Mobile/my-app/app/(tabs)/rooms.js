@@ -9,7 +9,6 @@ import {
   TouchableOpacity,
   FlatList,
   Modal,
-  Alert,
   ActivityIndicator
 } from 'react-native';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
@@ -639,11 +638,7 @@ export default function RoomsScreen() {
       if (startDate) {
         const startDateObj = parseDate(startDate);
         if (date < startDateObj) {
-          Alert.alert(
-            "Geçersiz Tarih", 
-            "Bitiş tarihi başlangıç tarihinden sonra olmalıdır.",
-            [{ text: "Tamam" }]
-          );
+          alert("Geçersiz Tarih Aralığı - Bitiş tarihi başlangıç tarihinden sonra olmalıdır.");
           return;
         }
       }
@@ -667,11 +662,7 @@ export default function RoomsScreen() {
       if (reservationDates.start) {
         const startDateObj = parseDate(reservationDates.start);
         if (date <= startDateObj) {
-          Alert.alert(
-            "Geçersiz Tarih", 
-            "Bitiş tarihi başlangıç tarihinden sonra olmalıdır.",
-            [{ text: "Tamam" }]
-          );
+          alert("Geçersiz Tarih - Bitiş tarihi başlangıç tarihinden sonra olmalıdır.");
           return;
         }
       }
@@ -926,12 +917,12 @@ export default function RoomsScreen() {
 
   const confirmReservation = async () => {
     if (!customerIdNumber.trim()) {
-      Alert.alert('Hata', 'Lütfen müşteri TC Kimlik No girin.');
+      alert('Hata - Lütfen müşteri TC Kimlik No girin.');
       return;
     }
     
     if (!reservationDates.start || !reservationDates.end) {
-      Alert.alert('Hata', 'Lütfen giriş ve çıkış tarihlerini seçin.');
+      alert('Hata - Lütfen giriş ve çıkış tarihlerini seçin.');
       return;
     }
     
@@ -940,11 +931,7 @@ export default function RoomsScreen() {
     const endDateObj = parseDate(reservationDates.end);
     
     if (endDateObj <= startDateObj) {
-      Alert.alert(
-        "Geçersiz Tarih Aralığı", 
-        "Bitiş tarihi başlangıç tarihinden sonra olmalıdır.",
-        [{ text: "Tamam" }]
-      );
+      alert("Geçersiz Tarih Aralığı - Bitiş tarihi başlangıç tarihinden sonra olmalıdır.");
       return;
     }
     
@@ -954,11 +941,7 @@ export default function RoomsScreen() {
       const guestNum = parseInt(numberOfGuests) || 1;
       
       if (guestNum > roomCapacity) {
-        Alert.alert(
-          "Kapasite Aşımı", 
-          `Bu oda maksimum ${roomCapacity} kişi kapasitelidir.`,
-          [{ text: "Tamam" }]
-        );
+        alert(`Kapasite Aşımı - Bu oda maksimum ${roomCapacity} kişi kapasitelidir.`);
         setNumberOfGuests(roomCapacity.toString());
         return;
       }
@@ -1017,24 +1000,17 @@ export default function RoomsScreen() {
         // Close modal
         setReservationModalVisible(false);
         
-        // Show confirmation
-        Alert.alert(
-          'Başarılı', 
-          `Oda ${reservationRoom.roomNumber || reservationRoom.id} başarıyla rezerve edildi.`,
-          [{ 
-            text: 'Tamam', 
-            onPress: () => {
-              // Aktif görünüme göre farklı yenileme fonksiyonunu çağır
-              if (activeView === 'calendar') {
-                console.log('Rezervasyon sonrası takvim verilerini yeniliyorum...');
-                fetchCalendarViewData(); // Takvim görünümü için veri yenileme
-              } else {
-                console.log('Rezervasyon sonrası kart görünümü verilerini yeniliyorum...');
-                refreshRooms(); // Kart görünümü için veri yenileme
-              }
-            }
-          }]
-        );
+        // Show confirmation and refresh data
+        alert(`Başarılı - Oda ${reservationRoom.roomNumber || reservationRoom.id} başarıyla rezerve edildi.`);
+        
+        // Aktif görünüme göre tekrar veri yenileme
+        if (activeView === 'calendar') {
+          console.log('Alert sonrası takvim verilerini tekrar yeniliyorum...');
+          fetchCalendarViewData();
+        } else {
+          console.log('Alert sonrası kart görünümü verilerini tekrar yeniliyorum...');
+          refreshRooms();
+        }
       } catch (error) {
         console.error('API error:', error);
         let errorMessage = 'Rezervasyon yapılırken bir hata oluştu.';
@@ -1045,11 +1021,11 @@ export default function RoomsScreen() {
           errorMessage = error.message;
         }
         
-        Alert.alert('Rezervasyon Hatası', errorMessage);
+        alert(`Rezervasyon Hatası - ${errorMessage}`);
       }
     } catch (error) {
       console.error('Reservation error:', error);
-      Alert.alert('Hata', 'Rezervasyon yapılırken bir hata oluştu. Lütfen tekrar deneyin.');
+      alert('Hata - Rezervasyon yapılırken bir hata oluştu. Lütfen tekrar deneyin.');
     } finally {
       setIsLoading(false);
     }
@@ -1074,7 +1050,7 @@ export default function RoomsScreen() {
         // If over capacity, set to max capacity
         setNumberOfGuests(roomCapacity.toString());
         // Optionally show alert about the limit
-        Alert.alert('Uyarı', `Bu oda maksimum ${roomCapacity} kişi kapasitelidir.`);
+        alert(`Uyarı - Bu oda maksimum ${roomCapacity} kişi kapasitelidir.`);
       } else if (guestNum === 0) {
         // Minimum 1 guest
         setNumberOfGuests('1');
@@ -1187,7 +1163,7 @@ export default function RoomsScreen() {
                       if (currentNum < roomCapacity) {
                         setNumberOfGuests((currentNum + 1).toString());
                       } else {
-                        Alert.alert('Uyarı', `Bu oda maksimum ${roomCapacity} kişi kapasitelidir.`);
+                        alert(`Uyarı - Bu oda maksimum ${roomCapacity} kişi kapasitelidir.`);
                       }
                     }}
                     disabled={parseInt(numberOfGuests) >= roomCapacity}
@@ -1308,7 +1284,7 @@ export default function RoomsScreen() {
 
   const handleReservationDateSelect = () => {
     if (!reservationDates.start || !reservationDates.end) {
-      Alert.alert('Uyarı', 'Lütfen hem giriş hem de çıkış tarihini seçin.');
+      alert('Uyarı - Lütfen hem giriş hem de çıkış tarihini seçin.');
       return;
     }
     
@@ -1317,11 +1293,7 @@ export default function RoomsScreen() {
     const endDateObj = parseDate(reservationDates.end);
     
     if (endDateObj <= startDateObj) {
-      Alert.alert(
-        "Geçersiz Tarih Aralığı", 
-        "Bitiş tarihi başlangıç tarihinden sonra olmalıdır.",
-        [{ text: "Tamam" }]
-      );
+      alert("Geçersiz Tarih Aralığı - Bitiş tarihi başlangıç tarihinden sonra olmalıdır.");
       return;
     }
     
@@ -1682,7 +1654,7 @@ export default function RoomsScreen() {
         const response = await roomService.cancelReservation(reservationId);
         console.log("Cancellation response:", response);
 
-        // Rezervasyon iptali başarılı olduktan hemen sonra güncel verileri yükle
+        // Takvim görünümündeyse, iptal başarılı olduktan hemen sonra takvim verilerini yenile
         if (activeView === 'calendar') {
           console.log('Rezervasyon iptali sonrası takvim verilerini hemen yeniliyorum...');
           await fetchCalendarViewData(); // Takvim verilerini hemen yenile
@@ -1693,26 +1665,20 @@ export default function RoomsScreen() {
 
         setModalVisible(false);
 
-        Alert.alert(
-          'Başarılı',
-          'Rezervasyon başarıyla iptal edildi.',
-          [{ 
-            text: 'Tamam',
-            onPress: () => {
-              // Aktif görünüme göre farklı yenileme fonksiyonunu çağır
-              if (activeView === 'calendar') {
-                console.log('Rezervasyon iptali sonrası takvim verilerini yeniliyorum...');
-                fetchCalendarViewData(); // Takvim görünümü için veri yenileme
-              } else {
-                console.log('Rezervasyon iptali sonrası kart görünümü verilerini yeniliyorum...');
-                refreshRooms(); // Kart görünümü için veri yenileme
-              }
-            }
-          }]
-        );
+        // Show success message and refresh data again
+        alert('Başarılı - Rezervasyon başarıyla iptal edildi.');
+        
+        // Tekrar veri yenileme
+        if (activeView === 'calendar') {
+          console.log('İptal alert sonrası takvim verilerini tekrar yeniliyorum...');
+          fetchCalendarViewData();
+        } else {
+          console.log('İptal alert sonrası kart görünümü verilerini tekrar yeniliyorum...');
+          refreshRooms();
+        }
       } else {
         console.error('Reservation ID not found');
-        Alert.alert('Hata', 'Rezervasyon bilgisi bulunamadı.');
+        alert('Hata - Rezervasyon bilgisi bulunamadı.');
       }
     } catch (error) {
       console.error('Error cancelling reservation:', error);
@@ -1721,21 +1687,15 @@ export default function RoomsScreen() {
       } else if (error.message) {
         console.error('Error Message:', error.message);
       }
-      Alert.alert(
-        'İptal Hatası',
-        'Rezervasyon iptal edilirken bir hata oluştu. Lütfen tekrar deneyin.',
-        [{
-          text: 'Tamam',
-          onPress: () => {
-            // Aktif görünüme göre farklı yenileme fonksiyonunu çağır
-            if (activeView === 'calendar') {
-              fetchCalendarViewData();
-            } else {
-              refreshRooms();
-            }
-          }
-        }]
-      );
+      
+      alert('İptal Hatası - Rezervasyon iptal edilirken bir hata oluştu. Lütfen tekrar deneyin.');
+      
+      // Aktif görünüme göre yine de veri yenileme yapalım
+      if (activeView === 'calendar') {
+        fetchCalendarViewData();
+      } else {
+        refreshRooms();
+      }
     } finally {
       setIsLoading(false);
     }
@@ -2275,7 +2235,7 @@ export default function RoomsScreen() {
     fetchCalendarViewData();
     
     // Inform the user
-    Alert.alert('Tarih Güncellemesi', 'Takvim bugünün tarihine getirildi.');
+    alert('Tarih Güncellemesi - Takvim bugünün tarihine getirildi.');
   };
 
   return (
