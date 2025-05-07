@@ -46,8 +46,8 @@ export default function RoomsScreen() {
   const [calendarType, setCalendarType] = useState(''); // 'start' or 'end'
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarViewRange, setCalendarViewRange] = useState({
-    start: new Date(2025, 3, 16), // April 16, 2025
-    end: new Date(2025, 3, 30) // April 30, 2025
+    start: new Date(), // Bugünün tarihi
+    end: new Date(new Date().setDate(new Date().getDate() + 6)) // Bugünden 6 gün sonrası (toplam 7 gün)
   });
   const [reservationModalVisible, setReservationModalVisible] = useState(false);
   const [reservationRoom, setReservationRoom] = useState(null);
@@ -1702,10 +1702,9 @@ export default function RoomsScreen() {
 
   // Function to get calendar view data from API
   const fetchCalendarViewData = async () => {
+    setIsLoading(true);
+    setError(null);
     try {
-      setIsLoading(true);
-      setError(null);
-      
       // Format dates for API (YYYY-MM-DD)
       const formatDateForApi = (date) => {
         const year = date.getFullYear();
@@ -1720,11 +1719,13 @@ export default function RoomsScreen() {
         EndDate: formatDateForApi(calendarViewRange.end)
       };
       
-      console.log("Requesting calendar data with params:", params);
+      console.log("DEBUG - Requesting calendar data with params:", params);
       
       // Call API
       const response = await roomService.getCalendarViewData(params);
-      console.log("Calendar API response:", response);
+      console.log("DEBUG - Calendar API response type:", typeof response);
+      console.log("DEBUG - Calendar API response is array:", Array.isArray(response));
+      console.log("DEBUG - Calendar API response length:", response ? (Array.isArray(response) ? response.length : 'not array') : 'null response');
       
       // Get the actual data array based on API response format
       let calendarData;
@@ -1736,6 +1737,16 @@ export default function RoomsScreen() {
         console.error("Unexpected API response format:", response);
         setError("API'den beklenmeyen veri formatı alındı. Lütfen tekrar deneyin.");
         return;
+      }
+      
+      console.log(`DEBUG - Calendar data processed: ${calendarData.length} rooms`);
+      if (calendarData.length > 0) {
+        console.log('DEBUG - First room sample:', JSON.stringify({
+          roomId: calendarData[0].roomId, 
+          id: calendarData[0].id,
+          roomNumber: calendarData[0].roomNumber,
+          dailyStatuses: calendarData[0].dailyStatuses?.length || 'no daily statuses'
+        }, null, 2));
       }
       
       // Process and update the local state with returned data
@@ -1778,7 +1789,7 @@ export default function RoomsScreen() {
         }
       });
       
-      console.log("Processed rooms for calendar view:", processedRooms.map(r => r.roomNumber));
+      console.log("DEBUG - Processed rooms for calendar view:", processedRooms.map(r => ({roomNumber: r.roomNumber, id: r.id, roomId: r.roomId})));
       setRooms(processedRooms);
     } catch (error) {
       console.error('Error fetching calendar data:', error);
@@ -1870,8 +1881,8 @@ export default function RoomsScreen() {
     const newStart = new Date(calendarViewRange.start);
     const newEnd = new Date(calendarViewRange.end);
     
-    newStart.setDate(newStart.getDate() + (increment * 14));
-    newEnd.setDate(newEnd.getDate() + (increment * 14));
+    newStart.setDate(newStart.getDate() + (increment * 7)); // 14 yerine 7 gün değişikliği
+    newEnd.setDate(newEnd.getDate() + (increment * 7)); // 14 yerine 7 gün değişikliği
     
     setCalendarViewRange({
       start: newStart,
@@ -2211,13 +2222,16 @@ export default function RoomsScreen() {
   // Function to initialize to today's date for calendar view
   const goToCurrentDate = () => {
     const today = new Date();
-    const twoWeeksLater = new Date();
-    twoWeeksLater.setDate(today.getDate() + 14);
+    const oneWeekLater = new Date();
+    oneWeekLater.setDate(today.getDate() + 6); // 7 gün görüntüleme için
     
     setCalendarViewRange({
       start: today,
-      end: twoWeeksLater
+      end: oneWeekLater
     });
+    
+    // Fetch calendar data for the new date range
+    fetchCalendarViewData();
     
     // Inform the user
     Alert.alert('Tarih Güncellemesi', 'Takvim bugünün tarihine getirildi.');
@@ -2287,6 +2301,16 @@ export default function RoomsScreen() {
               
               // Görünümü değiştir
               setActiveView('calendar');
+              
+              // Takvim görünümüne geçerken bugünün tarihini otomatik ayarla
+              const today = new Date();
+              const oneWeekLater = new Date();
+              oneWeekLater.setDate(today.getDate() + 6);
+              
+              setCalendarViewRange({
+                start: today,
+                end: oneWeekLater
+              });
               
               // Takvim verilerini getir
               fetchCalendarViewData();
