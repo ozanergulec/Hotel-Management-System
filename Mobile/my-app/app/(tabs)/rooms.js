@@ -13,7 +13,7 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useFocusEffect } from 'expo-router';
 import Colors from '../../constants/Colors';
 import roomService from '../../services/roomService';
 
@@ -63,6 +63,28 @@ export default function RoomsScreen() {
 
   // All available features for filtering - İngilizce adlar kullan
   const availableFeatures = ['TV', 'WiFi', 'Air Conditioning', 'Hot Tub', 'Balcony', 'Coffee Machine', 'Minibar'];
+
+  // useFocusEffect to fetch rooms data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('Rooms screen focused, fetching today\'s rooms...');
+      // Reset filters to today's date
+      const todayDate = getTodayFormatted();
+      setStartDate(todayDate);
+      setEndDate('');
+      setActiveFilters([{ type: 'startDate', value: todayDate }]);
+      setStatusFilter('Tümü');
+      setSelectedFeatures([]);
+      
+      // Fetch rooms with today's date
+      fetchRooms();
+      
+      return () => {
+        // Cleanup if needed when screen loses focus
+        console.log('Rooms screen unfocused');
+      };
+    }, [])
+  );
 
   // Fetch rooms data from API on component mount
   useEffect(() => {
@@ -2188,7 +2210,25 @@ export default function RoomsScreen() {
               styles.toggleButton, 
               activeView === 'card' && styles.activeToggle
             ]}
-            onPress={() => setActiveView('card')}
+            onPress={() => {
+              // Eğer zaten kart görünümündeyse bir şey yapma
+              if (activeView === 'card') return;
+              
+              // Görünümü değiştir
+              setActiveView('card');
+              
+              // Kart görünümüne geçerken bugünün tarihini ayarla ve verileri yenile
+              const todayDate = getTodayFormatted();
+              setStartDate(todayDate);
+              setEndDate('');
+              setActiveFilters([{ type: 'startDate', value: todayDate }]);
+              setStatusFilter('Tümü');
+              setSelectedFeatures([]);
+              
+              // Bugünün verilerini getir
+              console.log('Switching to card view, fetching today\'s rooms...');
+              fetchRooms();
+            }}
           >
             <MaterialIcons 
               name="grid-view" 
@@ -2210,7 +2250,16 @@ export default function RoomsScreen() {
               styles.toggleButton, 
               activeView === 'calendar' && styles.activeToggle
             ]}
-            onPress={() => setActiveView('calendar')}
+            onPress={() => {
+              // Eğer zaten takvim görünümündeyse bir şey yapma
+              if (activeView === 'calendar') return;
+              
+              // Görünümü değiştir
+              setActiveView('calendar');
+              
+              // Takvim verilerini getir
+              fetchCalendarViewData();
+            }}
           >
             <MaterialIcons 
               name="calendar-today" 
@@ -2229,7 +2278,16 @@ export default function RoomsScreen() {
           
           <TouchableOpacity 
             style={styles.refreshButton}
-            onPress={refreshRooms}
+            onPress={() => {
+              // Görünüm tipine göre farklı yenileme fonksiyonları çağır
+              if (activeView === 'calendar') {
+                console.log('Refreshing calendar view...');
+                fetchCalendarViewData(); // Takvim görünümü için CalendarView API'sini çağır
+              } else {
+                console.log('Refreshing card view...');
+                refreshRooms(); // Kart görünümü için normal oda listeleme API'sini çağır
+              }
+            }}
             disabled={isLoading}
           >
             <MaterialIcons name="refresh" size={20} color="#6B3DC9" />
@@ -2313,63 +2371,6 @@ export default function RoomsScreen() {
               onPress={refreshRooms}
             >
               <Text style={styles.retryButtonText}>TEKRAR DENE</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-        
-        {/* View Toggle */}
-        {activeView === 'card' && (
-          <View style={styles.viewToggle}>
-            <TouchableOpacity 
-              style={[
-                styles.toggleButton, 
-                activeView === 'card' && styles.activeToggle
-              ]}
-              onPress={() => setActiveView('card')}
-            >
-              <MaterialIcons 
-                name="grid-view" 
-                size={20} 
-                color={activeView === 'card' ? '#6B3DC9' : '#666'} 
-              />
-              <Text 
-                style={[
-                  styles.toggleText, 
-                  activeView === 'card' && styles.activeToggleText
-                ]}
-              >
-                KART GÖRÜNÜMÜ
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[
-                styles.toggleButton, 
-                activeView === 'calendar' && styles.activeToggle
-              ]}
-              onPress={() => setActiveView('calendar')}
-            >
-              <MaterialIcons 
-                name="calendar-today" 
-                size={20} 
-                color={activeView === 'calendar' ? '#6B3DC9' : '#666'} 
-              />
-              <Text 
-                style={[
-                  styles.toggleText, 
-                  activeView === 'calendar' && styles.activeToggleText
-                ]}
-              >
-                TAKVİM GÖRÜNÜMÜ
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={styles.refreshButton}
-              onPress={refreshRooms}
-            >
-              <MaterialIcons name="refresh" size={20} color="#6B3DC9" />
-              <Text style={styles.refreshText}>YENİLE</Text>
             </TouchableOpacity>
           </View>
         )}
