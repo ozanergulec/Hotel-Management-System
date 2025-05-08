@@ -67,6 +67,9 @@ export default function RoomsScreen() {
   useFocusEffect(
     React.useCallback(() => {
       console.log('Rooms screen focused, fetching today\'s rooms...');
+      // Görünümü her defasında kart görünümüne ayarla
+      setActiveView('card');
+      
       // Reset filters to today's date
       const todayDate = getTodayFormatted();
       setStartDate(todayDate);
@@ -84,6 +87,11 @@ export default function RoomsScreen() {
       };
     }, [])
   );
+
+  // useEffect to set card view as default when component mounts
+  useEffect(() => {
+    setActiveView('card');
+  }, []);
 
   // Fetch rooms data from API on component mount
   useEffect(() => {
