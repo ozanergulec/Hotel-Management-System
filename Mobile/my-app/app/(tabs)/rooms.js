@@ -197,13 +197,78 @@ export default function RoomsScreen() {
     // Filter by selected features/amenities
     if (selectedFeatures.length > 0) {
       for (const feature of selectedFeatures) {
-        // Basit özellik kontrolü - Sadece İngilizce adlarla
+        // Oda özellikleri yoksa filtreden geçemez
         if (!room.features || !room.features.length) return false;
         
         // Odanın bu özelliğe sahip olup olmadığını kontrol et
-        const featureExists = room.features.some(roomFeature => 
-          roomFeature.toLowerCase().includes(feature.toLowerCase())
-        );
+        let featureExists = false;
+        const featureLower = feature.toLowerCase().trim();
+
+        // Her bir oda özelliği için karşılaştırma yap
+        for (const roomFeature of room.features) {
+          const roomFeatureLower = roomFeature.toLowerCase().trim();
+          
+          // Doğrudan eşleşme kontrolü
+          if (roomFeatureLower === featureLower) {
+            featureExists = true;
+            break;
+          }
+          
+          // Wi-Fi/WiFi durumunu ele al
+          if ((featureLower === 'wi-fi' || featureLower === 'wifi') && 
+              (roomFeatureLower.includes('wifi') || roomFeatureLower.includes('wi-fi'))) {
+            featureExists = true;
+            break;
+          }
+          
+          // Jakuzi/Jacuzzi/Hot Tub durumunu ele al
+          if ((featureLower === 'jakuzi' || featureLower === 'hot tub' || featureLower === 'jacuzzi') && 
+              (roomFeatureLower.includes('jacuzzi') || roomFeatureLower.includes('hot tub') || roomFeatureLower.includes('jakuzi'))) {
+            featureExists = true;
+            break;
+          }
+          
+          // Mini Bar/Minibar durumunu ele al
+          if ((featureLower === 'mini bar' || featureLower === 'minibar') && 
+              (roomFeatureLower.includes('minibar') || roomFeatureLower.includes('mini bar') || roomFeatureLower.includes('mini-bar'))) {
+            featureExists = true;
+            break;
+          }
+          
+          // Klima/Air Conditioning durumunu ele al
+          if ((featureLower === 'klima' || featureLower === 'air conditioning') && 
+              (roomFeatureLower.includes('air conditioning') || roomFeatureLower.includes('klima') || roomFeatureLower.includes('ac'))) {
+            featureExists = true;
+            break;
+          }
+          
+          // Balkon/Balcony durumunu ele al
+          if ((featureLower === 'balkon' || featureLower === 'balcony') && 
+              (roomFeatureLower.includes('balcony') || roomFeatureLower.includes('balkon'))) {
+            featureExists = true;
+            break;
+          }
+          
+          // Kahve Makinesi durumunu ele al
+          if ((featureLower === 'kahve mak.' || featureLower === 'coffee machine') && 
+              (roomFeatureLower.includes('coffee') || roomFeatureLower.includes('kahve'))) {
+            featureExists = true;
+            break;
+          }
+          
+          // Deniz Manzarası durumunu ele al
+          if ((featureLower === 'deniz manzarası' || featureLower === 'sea view') && 
+              (roomFeatureLower.includes('sea view') || roomFeatureLower.includes('deniz manzarası'))) {
+            featureExists = true;
+            break;
+          }
+          
+          // Genel kısmi eşleşme kontrolü
+          if (roomFeatureLower.includes(featureLower) || featureLower.includes(roomFeatureLower)) {
+            featureExists = true;
+            break;
+          }
+        }
         
         if (!featureExists) {
           return false;
@@ -512,15 +577,55 @@ export default function RoomsScreen() {
 
   // Ekrandaki özellik adını veri tabanındaki ada çeviren yardımcı fonksiyon
   const getOriginalFeatureName = (displayName) => {
-    switch (displayName.toLowerCase()) {
+    if (!displayName) return '';
+    
+    // Küçük harfe çevir ve boşlukları temizle
+    const normalizedName = displayName.toLowerCase().trim();
+    
+    switch (normalizedName) {
       case 'tv': return 'TV';
-      case 'wi-fi': return 'WiFi';
-      case 'klima': return 'Air Conditioning';
-      case 'jakuzi': return 'Hot Tub';
-      case 'balkon': return 'Balcony';
-      case 'kahve mak.': return 'Coffee Machine';
-      case 'mini bar': return 'Minibar';
-      case 'deniz manzarası': return 'Sea View';
+      
+      // Wi-Fi varyasyonları
+      case 'wi-fi': 
+      case 'wifi': 
+      case 'wi fi': 
+        return 'WiFi';
+      
+      // Klima varyasyonları
+      case 'klima': 
+      case 'air conditioning': 
+      case 'ac': 
+        return 'Air Conditioning';
+      
+      // Jakuzi varyasyonları
+      case 'jakuzi': 
+      case 'hot tub': 
+      case 'jacuzzi': 
+        return 'Hot Tub';
+      
+      // Balkon varyasyonları
+      case 'balkon': 
+      case 'balcony': 
+        return 'Balcony';
+      
+      // Kahve makinesi varyasyonları
+      case 'kahve mak.': 
+      case 'kahve makinesi': 
+      case 'coffee machine': 
+      case 'coffee maker': 
+        return 'Coffee Machine';
+      
+      // Mini bar varyasyonları
+      case 'mini bar': 
+      case 'minibar': 
+      case 'mini-bar': 
+        return 'Minibar';
+      
+      // Deniz manzarası varyasyonları
+      case 'deniz manzarası': 
+      case 'sea view': 
+        return 'Sea View';
+        
       default: return displayName;
     }
   };
