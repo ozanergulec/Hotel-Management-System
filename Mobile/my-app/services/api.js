@@ -798,7 +798,212 @@ export const staffService = {
       console.error('Error updating staff member:', error);
       throw error;
     }
-  }
+  },
+
+  // Get shifts for a staff member
+  getStaffShifts: async (staffId) => {
+    try {
+      const token = await getAuthToken();
+      if (!token) throw new Error('Authentication required');
+
+      const response = await fetch(`${API_BASE_URL}/v1/Staff/${staffId}/shifts?version=1`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      // Try to parse the response
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch staff shifts');
+      }
+
+      console.log('Raw API response for shifts:', data);
+      
+      // Return the shifts as is - formatting will be handled by the component
+      return data;
+    } catch (error) {
+      console.error('Error fetching staff shifts:', error);
+      throw error;
+    }
+  },
+
+  // Add a new shift for a staff member
+  addStaffShift: async (staffId, shiftData) => {
+    try {
+      const token = await getAuthToken();
+      if (!token) throw new Error('Authentication required');
+
+      // Format the shift data according to API requirements
+      // C# TimeSpan format - send as a string with proper format "HH:mm:ss"
+      const formattedShiftData = [
+        {
+          dayOfTheWeek: shiftData.dayOfWeek,
+          // Format time as "HH:mm:ss" for C# TimeSpan
+          startTime: shiftData.startTime.includes(':') ? shiftData.startTime : `${shiftData.startTime}:00`,
+          endTime: shiftData.endTime.includes(':') ? shiftData.endTime : `${shiftData.endTime}:00`
+        }
+      ];
+
+      console.log('Sending shift data:', JSON.stringify(formattedShiftData));
+
+      // Add the version parameter to the URL
+      const response = await fetch(`${API_BASE_URL}/v1/Staff/${staffId}/shifts?version=1`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(formattedShiftData),
+      });
+
+      // Log the raw response for debugging
+      console.log('API response status:', response.status);
+      
+      const responseText = await response.text();
+      console.log('API response text:', responseText);
+      
+      let data = null;
+      if (responseText) {
+        try {
+          data = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('Error parsing API response:', parseError);
+          if (!response.ok) {
+            throw new Error('Failed to parse server response.');
+          }
+        }
+      }
+
+      if (!response.ok) {
+        throw new Error((data && data.message) || 'Failed to add staff shift');
+      }
+
+      return data || { success: true };
+    } catch (error) {
+      console.error('Error adding staff shift:', error);
+      throw error;
+    }
+  },
+
+  // Update an existing shift for a staff member - also uses POST
+  updateStaffShift: async (staffId, shiftId, shiftData) => {
+    try {
+      const token = await getAuthToken();
+      if (!token) throw new Error('Authentication required');
+
+      // For updating, we'll still use POST with the same format
+      // The API will handle it based on whether it's a new day or existing day
+      const formattedShiftData = [
+        {
+          // Use the actual selected day
+          dayOfTheWeek: shiftData.dayOfWeek,
+          // Format time as "HH:mm:ss" for C# TimeSpan
+          startTime: shiftData.startTime.includes(':') ? shiftData.startTime : `${shiftData.startTime}:00`,
+          endTime: shiftData.endTime.includes(':') ? shiftData.endTime : `${shiftData.endTime}:00`
+        }
+      ];
+
+      console.log('Updating shift data using POST:', JSON.stringify(formattedShiftData));
+
+      // Use POST for updates too, same endpoint as adding
+      const response = await fetch(`${API_BASE_URL}/v1/Staff/${staffId}/shifts?version=1`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(formattedShiftData),
+      });
+
+      // Log the raw response for debugging
+      console.log('API response status:', response.status);
+      
+      const responseText = await response.text();
+      console.log('API response text:', responseText);
+      
+      let data = null;
+      if (responseText) {
+        try {
+          data = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('Error parsing API response:', parseError);
+          if (!response.ok) {
+            throw new Error('Failed to parse server response.');
+          }
+        }
+      }
+
+      if (!response.ok) {
+        throw new Error((data && data.message) || 'Failed to update staff shift');
+      }
+
+      return data || { success: true };
+    } catch (error) {
+      console.error('Error updating staff shift:', error);
+      throw error;
+    }
+  },
+
+  // Update all shifts for a staff member at once
+  updateAllShifts: async (staffId, shiftsArray) => {
+    try {
+      const token = await getAuthToken();
+      if (!token) throw new Error('Authentication required');
+
+      // Format the data strictly according to API format with examples
+      // This follows EXACTLY the format in the screenshot
+      const formattedShifts = shiftsArray.map(shift => {
+        return {
+          "dayOfTheWeek": shift.dayOfWeek,
+          "startTime": "09:00:00", 
+          "endTime": "17:00:00"
+        };
+      });
+
+      console.log('Sending all shifts data:', JSON.stringify(formattedShifts));
+
+      // Use POST to update all shifts
+      const response = await fetch(`${API_BASE_URL}/v1/Staff/${staffId}/shifts?version=1`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(formattedShifts),
+      });
+
+      // Log the raw response for debugging
+      console.log('API response status:', response.status);
+      
+      const responseText = await response.text();
+      console.log('API response text:', responseText);
+      
+      let data = null;
+      if (responseText) {
+        try {
+          data = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('Error parsing API response:', parseError);
+          if (!response.ok) {
+            throw new Error('Failed to parse server response.');
+          }
+        }
+      }
+
+      if (!response.ok) {
+        throw new Error((data && data.message) || 'Failed to update staff shifts');
+      }
+
+      return data || { success: true };
+    } catch (error) {
+      console.error('Error updating staff shifts:', error);
+      throw error;
+    }
+  },
 };
 
 /**
