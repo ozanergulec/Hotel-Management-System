@@ -674,6 +674,134 @@ export const reservationService = {
 };
 
 /**
+ * Staff service to interact with the backend
+ */
+export const staffService = {
+  getAllStaff: async (status = '', department = '') => {
+    try {
+      const token = await getAuthToken();
+      if (!token) throw new Error('Authentication required');
+
+      let url = `${API_BASE_URL}/v1/Staff`;
+      const queryParams = [];
+      if (status) queryParams.push(`Status=${status}`);
+      if (department) queryParams.push(`Department=${department}`);
+      
+      if (queryParams.length > 0) {
+        url += `?${queryParams.join('&')}`;
+      }
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch staff');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error fetching staff:', error);
+      throw error;
+    }
+  },
+
+  getStaffById: async (id) => {
+    try {
+      const token = await getAuthToken();
+      if (!token) throw new Error('Authentication required');
+
+      const response = await fetch(`${API_BASE_URL}/v1/Staff/${id}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to fetch staff member');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error fetching staff member:', error);
+      throw error;
+    }
+  },
+
+  createStaff: async (staffData) => {
+    try {
+      const token = await getAuthToken();
+      if (!token) throw new Error('Authentication required');
+
+      const response = await fetch(`${API_BASE_URL}/v1/Staff`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(staffData),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to create staff member');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error creating staff member:', error);
+      throw error;
+    }
+  },
+
+  updateStaff: async (id, staffData) => {
+    try {
+      const token = await getAuthToken();
+      if (!token) throw new Error('Authentication required');
+
+      const response = await fetch(`${API_BASE_URL}/v1/Staff/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(staffData),
+      });
+
+      const responseText = await response.text();
+      let data = null;
+      if (responseText) {
+        try {
+          data = JSON.parse(responseText);
+        } catch (parseError) {
+          if (!response.ok) {
+            console.error('Error parsing update response:', parseError);
+            throw new Error('Failed to parse server response.');
+          }
+        }
+      }
+
+      if (!response.ok) {
+        throw new Error((data && data.message) || 'Failed to update staff member');
+      }
+
+      return data || { success: true };
+    } catch (error) {
+      console.error('Error updating staff member:', error);
+      throw error;
+    }
+  }
+};
+
+/**
  * Helper function to get the auth token from AsyncStorage
  */
 export const getAuthToken = async () => {
