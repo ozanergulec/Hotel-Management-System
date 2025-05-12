@@ -42,7 +42,6 @@ export default function ManageStaffScreen() {
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('all');
-  const [department, setDepartment] = useState('all');
   const [activeTab, setActiveTab] = useState('all');
   const [modalVisible, setModalVisible] = useState(false);
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
@@ -60,7 +59,17 @@ export default function ManageStaffScreen() {
     try {
       const filters = {};
       if (status !== 'all') filters.status = status;
-      if (activeTab !== 'all') filters.department = activeTab;
+      
+      // Handle department filtering in a more specific way
+      if (activeTab === 'front_office') {
+        filters.department = 'front_office';
+      } else if (activeTab === 'housekeeping') {
+        filters.department = 'housekeeping';
+      } else if (activeTab === 'other') {
+        // For 'other', we'll handle filtering on the client side after fetching
+        // since the backend might not support this complex filter
+      }
+      
       if (search) filters.search = search;
       const response = await staffService.getAllStaff(1, 50, filters);
       
@@ -108,9 +117,16 @@ export default function ManageStaffScreen() {
       status === 'all' ||
       (status === 'active' && person.status === 'Active') ||
       (status === 'inactive' && person.status === 'Inactive');
-    const matchesDepartment = department === 'all' || person.department === department || person.Department === department;
-    const matchesTab = activeTab === 'all' || person.department === activeTab || person.Department === activeTab;
-    return matchesSearch && matchesStatus && matchesDepartment && matchesTab;
+    
+    // Fix the department filtering based on the active tab
+    const departmentValue = person.department || person.Department || '';
+    const matchesTab = 
+      activeTab === 'all' || 
+      (activeTab === 'front_office' && departmentValue.toLowerCase() === 'front_office') ||
+      (activeTab === 'housekeeping' && departmentValue.toLowerCase() === 'housekeeping') ||
+      (activeTab === 'other' && departmentValue.toLowerCase() !== 'front_office' && departmentValue.toLowerCase() !== 'housekeeping');
+    
+    return matchesSearch && matchesStatus && matchesTab;
   });
 
   const renderStaffCard = ({ item }) => {
@@ -128,7 +144,6 @@ export default function ManageStaffScreen() {
           <Text style={styles.staffInfo}>Start Date: {(item.startDate || item.StartDate)?.slice(0, 10)}</Text>
           <Text style={styles.staffInfo}>Email: {item.email || item.Email}</Text>
           <Text style={styles.staffInfo}>Phone: {item.phoneNumber || item.PhoneNumber}</Text>
-          <Text style={styles.staffInfo}>Salary: <Text style={{ fontWeight: 'bold', color: '#16A085' }}>{item.salary || '0'} TL</Text></Text>
         </View>
         <View style={{ alignItems: 'flex-end', justifyContent: 'space-between' }}>
           <View style={isActive ? styles.statusActive : styles.statusInactive}>
@@ -262,7 +277,7 @@ function CreateStaffModal({ visible, onClose, onCreated }) {
 
   const handleSave = async () => {
     setError(null);
-    if (!firstName || !lastName || !department || !role || !startDate || !email || !phoneNumber || salary === '') {
+    if (!firstName || !lastName || !department || !role || !startDate || !email || !phoneNumber || !salary) {
       setError('Lütfen tüm alanları doldurun.');
       return;
     }
@@ -276,7 +291,7 @@ function CreateStaffModal({ visible, onClose, onCreated }) {
         StartDate: startDate.toISOString(),
         Email: email,
         PhoneNumber: phoneNumber,
-        Salary: Number(salary),
+        Salary: parseFloat(salary) || 0,
         IsActive: isActive,
       };
       console.log('Gönderilen veri:', staffData);
@@ -345,9 +360,17 @@ function CreateStaffModal({ visible, onClose, onCreated }) {
                   <MaterialIcons name="event" size={20} color="#aaa" style={styles.modalInputIcon} />
                   <Text style={[styles.modalInputModern, { color: startDate ? '#333' : '#aaa', paddingTop: 2 }]}>{startDate ? startDate.toLocaleDateString() : 'Start Date *'}</Text>
                 </TouchableOpacity>
+              </View>
+              <View style={styles.modalRowModern}>
                 <View style={styles.modalInputIconBox}>
                   <MaterialIcons name="attach-money" size={20} color="#aaa" style={styles.modalInputIcon} />
-                  <TextInput style={styles.modalInputModern} placeholder="Salary *" value={salary} onChangeText={setSalary} keyboardType="numeric" />
+                  <TextInput 
+                    style={styles.modalInputModern} 
+                    placeholder="Salary *" 
+                    value={salary} 
+                    onChangeText={setSalary} 
+                    keyboardType="numeric" 
+                  />
                 </View>
               </View>
               <View style={styles.modalRowModern}>
@@ -911,105 +934,78 @@ function StaffDetailsModal({ visible, staff, onClose, onUpdated, onDeleted }) {
         } else {
           // NO EXISTING SHIFT FOR THIS DAY - Create a new one
           console.log('No existing shift for this day, creating new shift');
-          
-          try {
-            // Check if we have existing shifts for other days
-            if (currentShiftsCopy && currentShiftsCopy.length > 0) {
-              console.log('Existing shifts found. Sending all shifts together.');
+        
+        try {
+          // Check if we have existing shifts for other days
+          if (currentShiftsCopy && currentShiftsCopy.length > 0) {
+            console.log('Existing shifts found. Sending all shifts together.');
+            
+            // Filter out any invalid shifts first
+            const validShifts = currentShiftsCopy.filter(shift => 
+              shift && 
+              shift.dayOfTheWeek && 
+              shift.startTime && 
+              shift.endTime
+            );
+            
+            if (validShifts.length > 0) {
+              console.log(`Found ${validShifts.length} valid shifts to include in request`);
               
-              // Filter out any invalid shifts first
-              const validShifts = currentShiftsCopy.filter(shift => 
-                shift && 
-                shift.dayOfTheWeek && 
-                shift.startTime && 
-                shift.endTime
-              );
+              // Create a combined array of all existing shifts + new shift
+              const allShiftsData = [
+                ...validShifts.map(shift => ({
+                  dayOfTheWeek: shift.dayOfTheWeek,
+                  startTime: shift.startTime,
+                  endTime: shift.endTime,
+                  staffId: parseInt(staff.id)
+                })),
+                newShiftData
+              ];
               
-              if (validShifts.length > 0) {
-                console.log(`Found ${validShifts.length} valid shifts to include in request`);
-                
-                // Create a combined array of all existing shifts + new shift
-                const allShiftsData = [
-                  ...validShifts.map(shift => ({
-                    dayOfTheWeek: shift.dayOfTheWeek,
-                    startTime: shift.startTime,
-                    endTime: shift.endTime,
-                    staffId: parseInt(staff.id)
-                  })),
-                  newShiftData
-                ];
-                
-                console.log('Sending combined shifts data:', JSON.stringify(allShiftsData, null, 2));
-                
-                // Send the entire array of shifts instead of just the new one
-                result = await shiftService.addShift(staff.id, allShiftsData);
-              } else {
-                console.log('No valid shifts found in current shifts array. Sending only new shift.');
-                result = await shiftService.addShift(staff.id, newShiftData);
-              }
+              console.log('Sending combined shifts data:', JSON.stringify(allShiftsData, null, 2));
+              
+              // Send the entire array of shifts instead of just the new one
+              result = await shiftService.addShift(staff.id, allShiftsData);
             } else {
-              // No existing shifts, send just the new one
-              console.log('No existing shifts. Sending only new shift.');
+              console.log('No valid shifts found in current shifts array. Sending only new shift.');
               result = await shiftService.addShift(staff.id, newShiftData);
             }
+          } else {
+            // No existing shifts, send just the new one
+            console.log('No existing shifts. Sending only new shift.');
+            result = await shiftService.addShift(staff.id, newShiftData);
+          }
+          
+          console.log('New shift result:', JSON.stringify(result, null, 2));
+          
+          if (result && result.id) {
+            // Make sure we have the new shift in the proper format
+            const newShift = {
+              id: result.id,
+              dayOfTheWeek: selectedDay, 
+              startTime: startTime,
+              endTime: endTime,
+              staffId: parseInt(staff.id)
+            };
             
-            console.log('New shift result:', JSON.stringify(result, null, 2));
+            // 1. Add to shifts array WITHOUT losing existing shifts
+            const newShiftsArray = [...currentShiftsCopy, newShift];
+            console.log(`Adding new shift. Original count: ${currentShiftsCopy.length}, New count: ${newShiftsArray.length}`);
+            setShifts(newShiftsArray);
             
-            if (result && result.id) {
-              // Make sure we have the new shift in the proper format
-              const newShift = {
-                id: result.id,
-                dayOfTheWeek: selectedDay, 
-                startTime: startTime,
-                endTime: endTime,
-                staffId: parseInt(staff.id)
-              };
-              
-              // 1. Add to shifts array WITHOUT losing existing shifts
-              const newShiftsArray = [...currentShiftsCopy, newShift];
-              console.log(`Adding new shift. Original count: ${currentShiftsCopy.length}, New count: ${newShiftsArray.length}`);
-              setShifts(newShiftsArray);
-              
-              // 2. Add to shifts by day
-              const updatedShiftsByDay = {...shiftsByDay};
-              if (!updatedShiftsByDay[selectedDay]) {
-                updatedShiftsByDay[selectedDay] = [];
-              }
-              updatedShiftsByDay[selectedDay].push(newShift);
-              
-              setShiftsByDay(updatedShiftsByDay);
-              console.log(`Updated shifts by day. Day: ${selectedDay}, Count: ${updatedShiftsByDay[selectedDay].length}`);
-            } else {
-              console.error('API returned invalid data for new shift');
-              
-              // Even though API didn't return a proper ID, still update the UI with a temporary ID
-              const tempId = Date.now();
-              const newShift = {
-                id: tempId,
-                dayOfTheWeek: selectedDay, 
-                startTime: startTime,
-                endTime: endTime,
-                staffId: parseInt(staff.id)
-              };
-              
-              // Add to shifts array
-              const newShiftsArray = [...currentShiftsCopy, newShift];
-              setShifts(newShiftsArray);
-              
-              // Add to shifts by day
-              const updatedShiftsByDay = {...shiftsByDay};
-              if (!updatedShiftsByDay[selectedDay]) {
-                updatedShiftsByDay[selectedDay] = [];
-              }
-              updatedShiftsByDay[selectedDay].push(newShift);
-              setShiftsByDay(updatedShiftsByDay);
-              
-              console.log(`Added temporary shift with ID: ${tempId} to UI state`);
+            // 2. Add to shifts by day
+            const updatedShiftsByDay = {...shiftsByDay};
+            if (!updatedShiftsByDay[selectedDay]) {
+              updatedShiftsByDay[selectedDay] = [];
             }
-          } catch (error) {
-            console.error('Failed to create new shift:', error);
+            updatedShiftsByDay[selectedDay].push(newShift);
             
-            // Even on error, update the UI with a temporary ID to provide feedback
+            setShiftsByDay(updatedShiftsByDay);
+            console.log(`Updated shifts by day. Day: ${selectedDay}, Count: ${updatedShiftsByDay[selectedDay].length}`);
+          } else {
+            console.error('API returned invalid data for new shift');
+            
+            // Even though API didn't return a proper ID, still update the UI with a temporary ID
             const tempId = Date.now();
             const newShift = {
               id: tempId,
@@ -1031,7 +1027,34 @@ function StaffDetailsModal({ visible, staff, onClose, onUpdated, onDeleted }) {
             updatedShiftsByDay[selectedDay].push(newShift);
             setShiftsByDay(updatedShiftsByDay);
             
-            console.log(`Added temporary shift with ID: ${tempId} to UI state despite API error`);
+            console.log(`Added temporary shift with ID: ${tempId} to UI state`);
+          }
+        } catch (error) {
+          console.error('Failed to create new shift:', error);
+          
+          // Even on error, update the UI with a temporary ID to provide feedback
+          const tempId = Date.now();
+          const newShift = {
+            id: tempId,
+            dayOfTheWeek: selectedDay, 
+            startTime: startTime,
+            endTime: endTime,
+            staffId: parseInt(staff.id)
+          };
+          
+          // Add to shifts array
+          const newShiftsArray = [...currentShiftsCopy, newShift];
+          setShifts(newShiftsArray);
+          
+          // Add to shifts by day
+          const updatedShiftsByDay = {...shiftsByDay};
+          if (!updatedShiftsByDay[selectedDay]) {
+            updatedShiftsByDay[selectedDay] = [];
+          }
+          updatedShiftsByDay[selectedDay].push(newShift);
+          setShiftsByDay(updatedShiftsByDay);
+          
+          console.log(`Added temporary shift with ID: ${tempId} to UI state despite API error`);
           }
         }
       }
@@ -1189,10 +1212,6 @@ function StaffDetailsModal({ visible, staff, onClose, onUpdated, onDeleted }) {
       const firstName = nameParts[0] || form.firstName || '';
       const lastName = nameParts.slice(1).join(' ') || form.lastName || '';
 
-      // Maaş değerini kontrol et
-      const salaryValue = form.salary || form.Salary || 0;
-      console.log('Güncelleme için kullanılan maaş değeri:', salaryValue);
-
       // Backend'in beklediği alan adlarıyla veri oluştur
       const updatedStaff = {
         id: form.id,
@@ -1203,7 +1222,7 @@ function StaffDetailsModal({ visible, staff, onClose, onUpdated, onDeleted }) {
         StartDate: form.startDate || form.StartDate,
         Email: form.email || form.Email,
         PhoneNumber: form.phoneNumber || form.PhoneNumber,
-        Salary: Number(salaryValue),
+        Salary: 0, // Maaş bilgisi 0 olarak ayarlandı
         IsActive: form.status === 'Active'
       };
       
@@ -1329,21 +1348,6 @@ function StaffDetailsModal({ visible, staff, onClose, onUpdated, onDeleted }) {
                   <View style={styles.detailsRow}><Text style={styles.detailsLabel}>Department:</Text>{editMode ? <TextInput value={form.department} onChangeText={v => handleChange('department', v)} style={styles.detailsInput} /> : <Text style={styles.detailsValue}>{staff.department}</Text>}</View>
                   <View style={styles.detailsRow}><Text style={styles.detailsLabel}>Start Date:</Text>{editMode ? <TextInput value={form.startDate} onChangeText={v => handleChange('startDate', v)} style={styles.detailsInput} /> : <Text style={styles.detailsValue}>{(staff.startDate || '').slice(0, 10)}</Text>}</View>
                   <View style={styles.detailsRow}><Text style={styles.detailsLabel}>Position/Role:</Text>{editMode ? <TextInput value={form.position || form.role} onChangeText={v => handleChange('position', v)} style={styles.detailsInput} /> : <Text style={styles.detailsValue}>{staff.position || staff.role}</Text>}</View>
-                  <View style={styles.detailsRow}>
-                    <Text style={styles.detailsLabel}>Salary:</Text>
-                    {editMode ? (
-                      <TextInput 
-                        value={String(form.salary || '')} 
-                        onChangeText={v => handleChange('salary', v)} 
-                        style={styles.detailsInput} 
-                        keyboardType="numeric" 
-                      />
-                    ) : (
-                      <Text style={[styles.detailsValue, { fontWeight: 'bold', color: '#16A085' }]}>
-                        {staff.salary ? `${staff.salary} TL` : '0 TL'}
-                      </Text>
-                    )}
-                  </View>
                 </View>
                 <View style={styles.detailsButtonRow}>
                   {editMode ? (
@@ -1508,7 +1512,7 @@ function StaffDetailsModal({ visible, staff, onClose, onUpdated, onDeleted }) {
                                   onPress={() => {
                                     const minutes = startTime.split(':')[1] || '00';
                                     setStartTime(`${hour}:${minutes}`);
-                                  }}
+                  }}
                                 >
                                   <Text style={[
                                     styles.timePickerGridItemText,
@@ -1555,7 +1559,7 @@ function StaffDetailsModal({ visible, staff, onClose, onUpdated, onDeleted }) {
                           </ScrollView>
                         </View>
                       </View>
-                      
+                
                       <View style={styles.timePickerPreview}>
                         <Text style={styles.timePickerPreviewText}>{startTime}</Text>
                       </View>
