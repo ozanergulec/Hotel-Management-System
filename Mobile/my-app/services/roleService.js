@@ -8,12 +8,23 @@ const ROLE_PERMISSIONS = {
   admin: ['all'],      // Adding 'admin' role with full access
   manager: ['all'],
   receptionist: ['rooms', 'checkIn', 'checkOut', 'customerInfo', 'other'],
+  accountant: ['accounting', 'financial-reports', 'other'], // Accountant has access only to accounting, financial reports and other pages
   // Add more roles as needed
 };
 
 // Define restricted pages for roles that need specific access control
 const RESTRICTED_PAGES = {
-  receptionist: ['accounting', 'financial-reports', 'manage-staff', 'manage-rooms']
+  receptionist: ['accounting', 'financial-reports', 'manage-staff', 'manage-rooms'],
+  accountant: ['customerInfo', 'checkIn', 'checkOut', 'rooms', 'manage-staff', 'manage-rooms']
+};
+
+// Map page routes to tab names for consistency in access control
+const PAGE_ROUTE_MAPPING = {
+  'rooms': 'rooms',
+  'manage-rooms': 'rooms',
+  'customerInfo': 'customerInfo',
+  'checkIn': 'checkIn',
+  'checkOut': 'checkOut'
 };
 
 /**
@@ -50,14 +61,29 @@ export const hasPageAccess = (user, page) => {
     return true;
   }
 
+  // Map the page route to its standard name if necessary
+  const standardPageName = PAGE_ROUTE_MAPPING[page] || page;
+  
   // Check if the page is restricted for any of the user's roles
   const isRestricted = userRolesLowercase.some(role => {
     const restrictedPages = RESTRICTED_PAGES[role];
-    return restrictedPages && restrictedPages.includes(page);
+    return restrictedPages && (restrictedPages.includes(page) || restrictedPages.includes(standardPageName));
   });
 
-  console.log('Is page restricted for user roles?', isRestricted);
-  return !isRestricted;
+  // If explicitly restricted, deny access
+  if (isRestricted) {
+    console.log('Page is restricted for user role, denying access');
+    return false;
+  }
+
+  // If not explicitly restricted, check if any role has explicit permission
+  const hasPermission = userRolesLowercase.some(role => {
+    const permissions = ROLE_PERMISSIONS[role];
+    return permissions && (permissions.includes(page) || permissions.includes(standardPageName) || permissions.includes('all'));
+  });
+
+  console.log('Has explicit permission:', hasPermission);
+  return hasPermission;
 };
 
 export default {
