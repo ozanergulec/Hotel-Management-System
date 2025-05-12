@@ -334,9 +334,32 @@ function CreateStaffModal({ visible, onClose, onCreated }) {
   const [salary, setSalary] = useState('');
   const [isActive, setIsActive] = useState(true);
   const [departmentModal, setDepartmentModal] = useState(false);
-  const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  // Format the date for display
+  const formatDate = (date) => {
+    try {
+      if (!date) return '';
+      return date.toLocaleDateString();
+    } catch (e) {
+      console.error('Date formatting error:', e);
+      return '';
+    }
+  };
+
+  // Handle date change
+  const onDateChange = (event, selectedDate) => {
+    try {
+      console.log('Date selected:', selectedDate);
+      const currentDate = selectedDate || startDate;
+      setShowDatePicker(Platform.OS === 'ios'); // Only keep open on iOS
+      setStartDate(currentDate);
+    } catch (e) {
+      console.error('Date change error:', e);
+    }
+  };
 
   const handleSave = async () => {
     setError(null);
@@ -371,86 +394,133 @@ function CreateStaffModal({ visible, onClose, onCreated }) {
   return (
     <Modal visible={visible} animationType="slide" transparent>
       <View style={styles.modalOverlay}>
-        <View style={styles.modalContainerModern}>
+        <View style={styles.modalContainerMobile}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Create New Staff</Text>
             <TouchableOpacity onPress={onClose} style={styles.modalClose}>
               <MaterialIcons name="close" size={24} color="#3C3169" />
             </TouchableOpacity>
           </View>
-          <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+          <ScrollView contentContainerStyle={styles.modalScrollContent}>
             {/* Personal Info Card */}
             <View style={styles.modalCard}>
-              <Text style={styles.modalSectionModern}><MaterialIcons name="person" size={18} color="#6B3DC9" />  Personal Information</Text>
-              <View style={styles.modalRowModern}>
-                <View style={styles.modalInputIconBox}>
-                  <MaterialIcons name="person" size={20} color="#aaa" style={styles.modalInputIcon} />
-                  <TextInput style={styles.modalInputModern} placeholder="First Name *" value={firstName} onChangeText={setFirstName} />
-                </View>
-                <View style={styles.modalInputIconBox}>
-                  <MaterialIcons name="person" size={20} color="#aaa" style={styles.modalInputIcon} />
-                  <TextInput style={styles.modalInputModern} placeholder="Last Name *" value={lastName} onChangeText={setLastName} />
-                </View>
+              <Text style={styles.modalSectionMobile}><MaterialIcons name="person" size={18} color="#6B3DC9" />  Personal Information</Text>
+              <View style={styles.modalInputIconBox}>
+                <MaterialIcons name="person" size={20} color="#aaa" style={styles.modalInputIcon} />
+                <TextInput style={styles.modalInputMobile} placeholder="First Name *" value={firstName} onChangeText={setFirstName} />
               </View>
-              <View style={styles.modalRowModern}>
-                <View style={styles.modalInputIconBox}>
-                  <MaterialIcons name="email" size={20} color="#aaa" style={styles.modalInputIcon} />
-                  <TextInput style={styles.modalInputModern} placeholder="Email *" value={email} onChangeText={setEmail} keyboardType="email-address" />
-                </View>
-                <View style={styles.modalInputIconBox}>
-                  <MaterialIcons name="phone" size={20} color="#aaa" style={styles.modalInputIcon} />
-                  <TextInput style={styles.modalInputModern} placeholder="Phone Number *" value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" />
-                </View>
+              <View style={styles.modalInputIconBox}>
+                <MaterialIcons name="person" size={20} color="#aaa" style={styles.modalInputIcon} />
+                <TextInput style={styles.modalInputMobile} placeholder="Last Name *" value={lastName} onChangeText={setLastName} />
+              </View>
+              <View style={styles.modalInputIconBox}>
+                <MaterialIcons name="email" size={20} color="#aaa" style={styles.modalInputIcon} />
+                <TextInput style={styles.modalInputMobile} placeholder="Email *" value={email} onChangeText={setEmail} keyboardType="email-address" />
+              </View>
+              <View style={styles.modalInputIconBox}>
+                <MaterialIcons name="phone" size={20} color="#aaa" style={styles.modalInputIcon} />
+                <TextInput style={styles.modalInputMobile} placeholder="Phone Number *" value={phoneNumber} onChangeText={setPhoneNumber} keyboardType="phone-pad" />
               </View>
             </View>
             {/* Employment Info Card */}
             <View style={styles.modalCard}>
-              <Text style={styles.modalSectionModern}><MaterialIcons name="work" size={18} color="#6B3DC9" />  Employment Information</Text>
-              <View style={styles.modalRowModern}>
-                {/* Department Modal Trigger */}
-                <TouchableOpacity style={styles.modalInputIconBox} onPress={() => setDepartmentModal(true)}>
-                  <MaterialIcons name={DEPARTMENTS_MODAL.find(d => d.key === department)?.icon || 'business-center'} size={20} color="#aaa" style={styles.modalInputIcon} />
-                  <Text style={[styles.modalInputModern, { color: department ? '#333' : '#aaa' }]}>{DEPARTMENTS_MODAL.find(d => d.key === department)?.label || 'Select Department *'}</Text>
-                  <MaterialIcons name={'expand-more'} size={20} color="#aaa" style={{ marginLeft: 4 }} />
-                </TouchableOpacity>
-                <View style={styles.modalInputIconBox}>
-                  <MaterialIcons name="badge" size={20} color="#aaa" style={styles.modalInputIcon} />
-                  <TextInput style={styles.modalInputModern} placeholder="Role/Position *" value={role} onChangeText={setRole} />
-                </View>
+              <Text style={styles.modalSectionMobile}><MaterialIcons name="work" size={18} color="#6B3DC9" />  Employment Information</Text>
+              {/* Department Modal Trigger */}
+              <TouchableOpacity style={styles.modalInputIconBox} onPress={() => setDepartmentModal(true)}>
+                <MaterialIcons name={DEPARTMENTS_MODAL.find(d => d.key === department)?.icon || 'business-center'} size={20} color="#aaa" style={styles.modalInputIcon} />
+                <Text style={[styles.modalInputMobile, { color: department ? '#333' : '#aaa' }]}>{DEPARTMENTS_MODAL.find(d => d.key === department)?.label || 'Select Department *'}</Text>
+                <MaterialIcons name={'expand-more'} size={20} color="#aaa" style={{ marginLeft: 4 }} />
+              </TouchableOpacity>
+              <View style={styles.modalInputIconBox}>
+                <MaterialIcons name="badge" size={20} color="#aaa" style={styles.modalInputIcon} />
+                <TextInput style={styles.modalInputMobile} placeholder="Role/Position *" value={role} onChangeText={setRole} />
               </View>
-              <View style={styles.modalRowModern}>
-                <TouchableOpacity style={styles.modalInputIconBox} onPress={() => setDatePickerVisible(true)}>
-                  <MaterialIcons name="event" size={20} color="#aaa" style={styles.modalInputIcon} />
-                  <Text style={[styles.modalInputModern, { color: startDate ? '#333' : '#aaa', paddingTop: 2 }]}>{startDate ? startDate.toLocaleDateString() : 'Start Date *'}</Text>
-                </TouchableOpacity>
-              </View>
-              <View style={styles.modalRowModern}>
-                <View style={styles.modalInputIconBox}>
-                  <MaterialIcons name="attach-money" size={20} color="#aaa" style={styles.modalInputIcon} />
-                  <TextInput 
-                    style={styles.modalInputModern} 
-                    placeholder="Salary *" 
-                    value={salary} 
-                    onChangeText={setSalary} 
-                    keyboardType="numeric" 
-                  />
+              
+              {/* Date Picker Button */}
+              <TouchableOpacity 
+                style={styles.datePickerButton} 
+                onPress={() => {
+                  console.log('Opening date picker');
+                  setShowDatePicker(true);
+                }}
+              >
+                <MaterialIcons name="event" size={20} color="#3C3169" style={styles.modalInputIcon} />
+                <Text style={styles.datePickerText}>
+                  {formatDate(startDate) || 'Select Start Date *'}
+                </Text>
+                <MaterialIcons name="arrow-drop-down" size={24} color="#3C3169" />
+              </TouchableOpacity>
+
+              {/* Simple Date Picker - will show inline on Android and as a modal on iOS */}
+              {showDatePicker && (
+                <View style={styles.datePickerContainer}>
+                  {Platform.OS === 'android' ? (
+                    <DateTimePickerModal
+                      isVisible={showDatePicker}
+                      mode="date"
+                      display="default"
+                      onConfirm={(date) => {
+                        setStartDate(date);
+                        setShowDatePicker(false);
+                      }}
+                      onCancel={() => setShowDatePicker(false)}
+                      date={startDate}
+                    />
+                  ) : (
+                    // Fallback to alternative date selection for iOS
+                    <View style={styles.iosDatePickerContainer}>
+                      <View style={styles.iosDatePickerHeader}>
+                        <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                          <Text style={styles.iosDatePickerCancel}>Cancel</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          onPress={() => {
+                            setShowDatePicker(false);
+                          }}
+                        >
+                          <Text style={styles.iosDatePickerDone}>Done</Text>
+                        </TouchableOpacity>
+                      </View>
+                      <DateTimePickerModal
+                        isVisible={showDatePicker}
+                        mode="date"
+                        display="spinner"
+                        onConfirm={(date) => {
+                          setStartDate(date);
+                          setShowDatePicker(false);
+                        }}
+                        onCancel={() => setShowDatePicker(false)}
+                        date={startDate}
+                      />
+                    </View>
+                  )}
                 </View>
+              )}
+              
+              <View style={styles.modalInputIconBox}>
+                <MaterialIcons name="attach-money" size={20} color="#aaa" style={styles.modalInputIcon} />
+                <TextInput 
+                  style={styles.modalInputMobile} 
+                  placeholder="Salary *" 
+                  value={salary} 
+                  onChangeText={setSalary} 
+                  keyboardType="numeric" 
+                />
               </View>
-              <View style={styles.modalRowModern}>
-                <View style={styles.modalSwitchRow}>
-                  <Text style={{ fontWeight: 'bold', color: isActive ? '#16A085' : '#aaa', marginRight: 8 }}>{isActive ? 'Active' : 'Inactive'}</Text>
-                  <Switch value={isActive} onValueChange={setIsActive} trackColor={{ true: '#16A085', false: '#aaa' }} />
-                </View>
+              <View style={styles.modalSwitchRow}>
+                <Text style={{ fontWeight: 'bold', color: isActive ? '#16A085' : '#aaa', marginRight: 8 }}>{isActive ? 'Active' : 'Inactive'}</Text>
+                <Switch value={isActive} onValueChange={setIsActive} trackColor={{ true: '#16A085', false: '#aaa' }} />
               </View>
             </View>
             {error && <Text style={{ color: 'red', textAlign: 'center', marginTop: 8 }}>{error}</Text>}
-            <View style={styles.modalButtonRowModern}>
-              <TouchableOpacity style={styles.modalCancelModern} onPress={onClose}><Text style={styles.modalCancelTextModern}>Cancel</Text></TouchableOpacity>
-              <TouchableOpacity style={styles.modalSaveModern} onPress={handleSave} disabled={loading}>
-                <Text style={styles.modalSaveTextModern}>{loading ? 'Saving...' : 'Save'}</Text>
+            <View style={styles.modalButtonRowMobile}>
+              <TouchableOpacity style={styles.modalCancelMobile} onPress={onClose}><Text style={styles.modalCancelTextMobile}>Cancel</Text></TouchableOpacity>
+              <TouchableOpacity style={styles.modalSaveMobile} onPress={handleSave} disabled={loading}>
+                <Text style={styles.modalSaveTextMobile}>{loading ? 'Saving...' : 'Save'}</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
+          
           {/* Department Modal */}
           <Modal visible={departmentModal} transparent animationType="fade">
             <TouchableOpacity style={styles.departmentModalOverlay} activeOpacity={1} onPress={() => setDepartmentModal(false)}>
@@ -464,14 +534,85 @@ function CreateStaffModal({ visible, onClose, onCreated }) {
               </View>
             </TouchableOpacity>
           </Modal>
-          {/* Date Picker Modal */}
-          <DateTimePickerModal
-            isVisible={datePickerVisible}
-            mode="date"
-            onConfirm={date => { setDatePickerVisible(false); if (date) setStartDate(date); }}
-            onCancel={() => setDatePickerVisible(false)}
-            date={startDate}
-          />
+          
+          {/* Alternative Date Picker Modal for when inline picker doesn't work */}
+          <Modal
+            visible={Platform.OS !== 'android' && showDatePicker}
+            transparent
+            animationType="slide"
+          >
+            <View style={styles.datePickerModalContainerAlt}>
+              <View style={styles.datePickerModalContentAlt}>
+                <View style={styles.datePickerHeaderAlt}>
+                  <Text style={styles.datePickerTitleAlt}>Select Date</Text>
+                  <TouchableOpacity onPress={() => setShowDatePicker(false)}>
+                    <MaterialIcons name="close" size={24} color="#666" />
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.datePickerCalendarContainerAlt}>
+                  {/* Calendar UI */}
+                  <View style={styles.calendarGrid}>
+                    {/* Month selection */}
+                    <View style={styles.monthSelector}>
+                      <TouchableOpacity>
+                        <MaterialIcons name="chevron-left" size={24} color="#3C3169" />
+                      </TouchableOpacity>
+                      <Text style={styles.monthYearText}>
+                        {startDate.toLocaleString('default', { month: 'long' })} {startDate.getFullYear()}
+                      </Text>
+                      <TouchableOpacity>
+                        <MaterialIcons name="chevron-right" size={24} color="#3C3169" />
+                      </TouchableOpacity>
+                    </View>
+                    
+                    {/* Simple date grid */}
+                    <View style={styles.daysContainer}>
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30].map(day => (
+                        <TouchableOpacity 
+                          key={`day-${day}`}
+                          style={[
+                            styles.dayButton,
+                            startDate.getDate() === day && styles.selectedDayButton
+                          ]}
+                          onPress={() => {
+                            const newDate = new Date(startDate);
+                            newDate.setDate(day);
+                            setStartDate(newDate);
+                          }}
+                        >
+                          <Text 
+                            style={[
+                              styles.dayButtonText,
+                              startDate.getDate() === day && styles.selectedDayButtonText
+                            ]}
+                          >
+                            {day}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+                </View>
+                
+                <View style={styles.datePickerButtonsAlt}>
+                  <TouchableOpacity 
+                    style={styles.datePickerCancelBtnAlt} 
+                    onPress={() => setShowDatePicker(false)}
+                  >
+                    <Text style={styles.datePickerCancelTextAlt}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.datePickerConfirmBtnAlt} 
+                    onPress={() => setShowDatePicker(false)}
+                  >
+                    <Text style={styles.datePickerConfirmTextAlt}>Confirm</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+          
         </View>
       </View>
     </Modal>
@@ -2166,12 +2307,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalContainerModern: {
+  modalContainerMobile: {
     backgroundColor: 'white',
     borderRadius: 20,
-    padding: 20,
-    width: '80%',
-    maxHeight: '80%',
+    padding: 16,
+    width: '94%',
+    maxHeight: '90%',
+  },
+  modalScrollContent: {
+    paddingBottom: 20,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -2193,15 +2337,10 @@ const styles = StyleSheet.create({
     padding: 16,
     marginBottom: 12,
   },
-  modalSectionModern: {
-    fontSize: 18,
+  modalSectionMobile: {
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 12,
-  },
-  modalRowModern: {
-    flexDirection: 'row',
-    alignItems: 'center',
     marginBottom: 10,
   },
   modalInputIconBox: {
@@ -2212,36 +2351,47 @@ const styles = StyleSheet.create({
   modalInputIcon: {
     marginRight: 7,
   },
-  modalInputModern: {
+  modalInputMobile: {
     flex: 1,
-    fontSize: 17,
+    fontSize: 16,
     color: '#333',
     paddingVertical: 4,
   },
-  modalButtonRowModern: {
+  modalButtonRowMobile: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 10,
   },
-  modalCancelModern: {
+  modalCancelMobile: {
     backgroundColor: '#aaa',
     borderRadius: 8,
     padding: 12,
+    flex: 1,
+    marginRight: 8,
+    alignItems: 'center',
   },
-  modalCancelTextModern: {
+  modalCancelTextMobile: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 17,
+    fontSize: 16,
   },
-  modalSaveModern: {
+  modalSaveMobile: {
     backgroundColor: '#16A085',
     borderRadius: 8,
     padding: 12,
+    flex: 1,
+    alignItems: 'center',
   },
-  modalSaveTextModern: {
+  modalSaveTextMobile: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 17,
+    fontSize: 16,
+  },
+  modalSwitchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
   },
   departmentModalOverlay: {
     flex: 1,
@@ -2882,6 +3032,148 @@ const styles = StyleSheet.create({
   },
   timePickerConfirmText: {
     color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  datePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#e8e8f8',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#d0d0e0',
+  },
+  datePickerText: {
+    fontSize: 16,
+    color: '#333',
+    flex: 1,
+  },
+  datePickerContainer: {
+    marginBottom: 10,
+  },
+  iosDatePickerContainer: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  iosDatePickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 10,
+    backgroundColor: '#fff',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  iosDatePickerCancel: {
+    color: '#3C3169',
+    fontSize: 16,
+  },
+  iosDatePickerDone: {
+    color: '#16A085',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  // Alternative date picker styles
+  datePickerModalContainerAlt: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  datePickerModalContentAlt: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 16,
+    width: '90%',
+    maxWidth: 350,
+  },
+  datePickerHeaderAlt: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    marginBottom: 15,
+  },
+  datePickerTitleAlt: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#3C3169',
+  },
+  datePickerCalendarContainerAlt: {
+    paddingVertical: 10,
+  },
+  calendarGrid: {
+    marginVertical: 10,
+  },
+  monthSelector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  monthYearText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#3C3169',
+  },
+  daysContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+  },
+  dayButton: {
+    width: '14.28%',
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 5,
+  },
+  selectedDayButton: {
+    backgroundColor: '#3C3169',
+    borderRadius: 20,
+  },
+  dayButtonText: {
+    fontSize: 14,
+    color: '#333',
+  },
+  selectedDayButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  datePickerButtonsAlt: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    paddingTop: 15,
+  },
+  datePickerCancelBtnAlt: {
+    backgroundColor: '#f2f2f2',
+    borderRadius: 8,
+    padding: 12,
+    flex: 1,
+    marginRight: 10,
+    alignItems: 'center',
+  },
+  datePickerCancelTextAlt: {
+    color: '#666',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  datePickerConfirmBtnAlt: {
+    backgroundColor: '#3C3169',
+    borderRadius: 8,
+    padding: 12,
+    flex: 1,
+    alignItems: 'center',
+  },
+  datePickerConfirmTextAlt: {
+    color: 'white',
     fontWeight: 'bold',
     fontSize: 16,
   },
