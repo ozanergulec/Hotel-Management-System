@@ -1033,9 +1033,21 @@ function StaffDetailsModal({ visible, staff, onClose, onUpdated, onDeleted }) {
         }
       }
       
-      // 3. Call API to delete the shift
-      const result = await shiftService.deleteShift(staff.id, shiftId);
-      console.log(`Shift ${shiftId} deletion result:`, result);
+      // 3. Instead of calling delete API (which doesn't exist), send all remaining shifts
+      // Prepare remaining shifts data for POST request
+      const remainingShifts = updatedShifts.map(shift => ({
+        dayOfTheWeek: shift.dayOfTheWeek,
+        startTime: shift.startTime,
+        endTime: shift.endTime,
+        staffId: parseInt(staff.id)
+      }));
+      
+      console.log(`Sending ${remainingShifts.length} remaining shifts after removing shift ${shiftId}`);
+      console.log('Remaining shifts data:', JSON.stringify(remainingShifts, null, 2));
+      
+      // Call API with all remaining shifts
+      const result = await shiftService.addShift(staff.id, remainingShifts);
+      console.log(`Shift update after deletion result:`, result);
       
       // 4. Force UI update
       setComponentKey(Date.now().toString());
