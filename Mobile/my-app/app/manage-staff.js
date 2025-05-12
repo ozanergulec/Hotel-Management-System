@@ -437,8 +437,10 @@ function StaffDetailsModal({ visible, staff, onClose, onUpdated, onDeleted }) {
   const handleStartTimeChange = (date) => {
     console.log('Start time selected:', date);
     if (date) {
-      const hours = date.getHours();
-      const minutes = date.getMinutes();
+      // Ensure we're getting a valid Date object
+      const timeDate = new Date(date);
+      const hours = timeDate.getHours();
+      const minutes = timeDate.getMinutes();
       const formattedTime = formatTime(hours, minutes);
       console.log('Formatted start time:', formattedTime);
       setStartTime(formattedTime);
@@ -449,8 +451,10 @@ function StaffDetailsModal({ visible, staff, onClose, onUpdated, onDeleted }) {
   const handleEndTimeChange = (date) => {
     console.log('End time selected:', date);
     if (date) {
-      const hours = date.getHours();
-      const minutes = date.getMinutes();
+      // Ensure we're getting a valid Date object
+      const timeDate = new Date(date);
+      const hours = timeDate.getHours();
+      const minutes = timeDate.getMinutes();
       const formattedTime = formatTime(hours, minutes);
       console.log('Formatted end time:', formattedTime);
       setEndTime(formattedTime);
@@ -752,8 +756,9 @@ function StaffDetailsModal({ visible, staff, onClose, onUpdated, onDeleted }) {
       
       let result;
       
+      // Check if we are in edit mode or if there's already a shift for the selected day
       if (editingShiftId) {
-        // UPDATE EXISTING SHIFT
+        // EDIT MODE - Update existing shift
         console.log(`Updating shift with ID: ${editingShiftId}`);
         
         try {
@@ -771,6 +776,8 @@ function StaffDetailsModal({ visible, staff, onClose, onUpdated, onDeleted }) {
               existingShift.endTime === endTime) {
             console.log('No changes detected in shift data, skipping update');
             setEditingShiftId(null);
+            setLoading(false);
+            setIsApiOperationInProgress(false);
             return;
           }
           
@@ -806,13 +813,21 @@ function StaffDetailsModal({ visible, staff, onClose, onUpdated, onDeleted }) {
           
           setShiftsByDay(updatedShiftsByDay);
           
-          // 4. Call API to update the shift
-          result = await shiftService.updateShift(staff.id, editingShiftId, {
-            dayOfTheWeek: selectedDay,
-            startTime: startTime,
-            endTime: endTime,
+          // 4. Call API to update the shift - FIXED: Instead of updating just one shift, 
+          // send all shifts including the updated one
+          // Prepare all shifts data for POST request
+          const allShiftsData = updatedShifts.map(shift => ({
+            dayOfTheWeek: shift.dayOfTheWeek,
+            startTime: shift.startTime,
+            endTime: shift.endTime,
             staffId: parseInt(staff.id)
-          });
+          }));
+          
+          console.log(`Sending ${allShiftsData.length} shifts with the updated shift`);
+          console.log('All shifts data:', JSON.stringify(allShiftsData, null, 2));
+          
+          // Call API with all shifts
+          result = await shiftService.addShift(staff.id, allShiftsData);
           
           console.log('Shift update result:', JSON.stringify(result, null, 2));
           
@@ -832,80 +847,169 @@ function StaffDetailsModal({ visible, staff, onClose, onUpdated, onDeleted }) {
           alert('There was an error updating the shift, but changes have been applied to the view.');
         }
       } else {
-        // CREATE NEW SHIFT
-        console.log('Creating new shift');
+        // NEW SHIFT MODE - First check if there's already a shift for this day
+        console.log('Checking if there is already a shift for this day...');
+        const existingShiftForDay = shifts.find(shift => shift.dayOfTheWeek === selectedDay);
         
-        try {
-          // Check if we have existing shifts for other days
-          if (currentShiftsCopy && currentShiftsCopy.length > 0) {
-            console.log('Existing shifts found. Sending all shifts together.');
-            
-            // Filter out any invalid shifts first
-            const validShifts = currentShiftsCopy.filter(shift => 
-              shift && 
-              shift.dayOfTheWeek && 
-              shift.startTime && 
-              shift.endTime
+        if (existingShiftForDay) {
+          // FOUND EXISTING SHIFT FOR THIS DAY
+          console.log(`Found existing shift for ${selectedDay}, will update instead of creating new`);
+          
+          // Create an updated shift object with the existing ID but new time values
+          const updatedShift = {
+            id: existingShiftForDay.id,
+            dayOfTheWeek: selectedDay,
+            startTime: startTime,  // Use the new start time
+            endTime: endTime,      // Use the new end time
+            staffId: parseInt(staff.id)
+          };
+          
+          // Update the shifts array - replace old shift with updated one
+          const updatedShifts = currentShiftsCopy.map(shift => 
+            shift.id === existingShiftForDay.id ? updatedShift : shift
+          );
+          console.log('Updated shifts after edit:', updatedShifts.length);
+          setShifts(updatedShifts);
+          
+          // Update shifts by day
+          const updatedShiftsByDay = {...shiftsByDay};
+          
+          // Remove old shift from day
+          if (updatedShiftsByDay[selectedDay]) {
+            updatedShiftsByDay[selectedDay] = updatedShiftsByDay[selectedDay].filter(
+              shift => shift.id !== existingShiftForDay.id
             );
-            
-            if (validShifts.length > 0) {
-              console.log(`Found ${validShifts.length} valid shifts to include in request`);
-              
-              // Create a combined array of all existing shifts + new shift
-              const allShiftsData = [
-                ...validShifts.map(shift => ({
-                  dayOfTheWeek: shift.dayOfTheWeek,
-                  startTime: shift.startTime,
-                  endTime: shift.endTime,
-                  staffId: parseInt(staff.id)
-                })),
-                newShiftData
-              ];
-              
-              console.log('Sending combined shifts data:', JSON.stringify(allShiftsData, null, 2));
-              
-              // Send the entire array of shifts instead of just the new one
-              result = await shiftService.addShift(staff.id, allShiftsData);
-            } else {
-              console.log('No valid shifts found in current shifts array. Sending only new shift.');
-              result = await shiftService.addShift(staff.id, newShiftData);
-            }
           } else {
-            // No existing shifts, send just the new one
-            console.log('No existing shifts. Sending only new shift.');
-            result = await shiftService.addShift(staff.id, newShiftData);
+            updatedShiftsByDay[selectedDay] = [];
           }
           
-          console.log('New shift result:', JSON.stringify(result, null, 2));
+          // Add updated shift to day
+          updatedShiftsByDay[selectedDay].push(updatedShift);
+          setShiftsByDay(updatedShiftsByDay);
           
-          if (result && result.id) {
-            // Make sure we have the new shift in the proper format
-            const newShift = {
-              id: result.id,
-              dayOfTheWeek: selectedDay, 
-              startTime: startTime,
-              endTime: endTime,
-              staffId: parseInt(staff.id)
-            };
-            
-            // 1. Add to shifts array WITHOUT losing existing shifts
-            const newShiftsArray = [...currentShiftsCopy, newShift];
-            console.log(`Adding new shift. Original count: ${currentShiftsCopy.length}, New count: ${newShiftsArray.length}`);
-            setShifts(newShiftsArray);
-            
-            // 2. Add to shifts by day
-            const updatedShiftsByDay = {...shiftsByDay};
-            if (!updatedShiftsByDay[selectedDay]) {
-              updatedShiftsByDay[selectedDay] = [];
+          // Prepare all shifts data for API call
+          const allShiftsData = updatedShifts.map(shift => ({
+            dayOfTheWeek: shift.dayOfTheWeek,
+            startTime: shift.startTime,
+            endTime: shift.endTime,
+            staffId: parseInt(staff.id)
+          }));
+          
+          console.log(`Sending ${allShiftsData.length} shifts with the updated shift`);
+          
+          // Call API with all shifts
+          result = await shiftService.addShift(staff.id, allShiftsData);
+          console.log('Shift update result:', JSON.stringify(result, null, 2));
+          
+          // Force UI update
+          setComponentKey(Date.now().toString());
+          
+          setTimeout(() => {
+            fetchShifts();
+          }, 800);
+          
+        } else {
+          // NO EXISTING SHIFT FOR THIS DAY - Create a new one
+          console.log('No existing shift for this day, creating new shift');
+          
+          try {
+            // Check if we have existing shifts for other days
+            if (currentShiftsCopy && currentShiftsCopy.length > 0) {
+              console.log('Existing shifts found. Sending all shifts together.');
+              
+              // Filter out any invalid shifts first
+              const validShifts = currentShiftsCopy.filter(shift => 
+                shift && 
+                shift.dayOfTheWeek && 
+                shift.startTime && 
+                shift.endTime
+              );
+              
+              if (validShifts.length > 0) {
+                console.log(`Found ${validShifts.length} valid shifts to include in request`);
+                
+                // Create a combined array of all existing shifts + new shift
+                const allShiftsData = [
+                  ...validShifts.map(shift => ({
+                    dayOfTheWeek: shift.dayOfTheWeek,
+                    startTime: shift.startTime,
+                    endTime: shift.endTime,
+                    staffId: parseInt(staff.id)
+                  })),
+                  newShiftData
+                ];
+                
+                console.log('Sending combined shifts data:', JSON.stringify(allShiftsData, null, 2));
+                
+                // Send the entire array of shifts instead of just the new one
+                result = await shiftService.addShift(staff.id, allShiftsData);
+              } else {
+                console.log('No valid shifts found in current shifts array. Sending only new shift.');
+                result = await shiftService.addShift(staff.id, newShiftData);
+              }
+            } else {
+              // No existing shifts, send just the new one
+              console.log('No existing shifts. Sending only new shift.');
+              result = await shiftService.addShift(staff.id, newShiftData);
             }
-            updatedShiftsByDay[selectedDay].push(newShift);
             
-            setShiftsByDay(updatedShiftsByDay);
-            console.log(`Updated shifts by day. Day: ${selectedDay}, Count: ${updatedShiftsByDay[selectedDay].length}`);
-          } else {
-            console.error('API returned invalid data for new shift');
+            console.log('New shift result:', JSON.stringify(result, null, 2));
             
-            // Even though API didn't return a proper ID, still update the UI with a temporary ID
+            if (result && result.id) {
+              // Make sure we have the new shift in the proper format
+              const newShift = {
+                id: result.id,
+                dayOfTheWeek: selectedDay, 
+                startTime: startTime,
+                endTime: endTime,
+                staffId: parseInt(staff.id)
+              };
+              
+              // 1. Add to shifts array WITHOUT losing existing shifts
+              const newShiftsArray = [...currentShiftsCopy, newShift];
+              console.log(`Adding new shift. Original count: ${currentShiftsCopy.length}, New count: ${newShiftsArray.length}`);
+              setShifts(newShiftsArray);
+              
+              // 2. Add to shifts by day
+              const updatedShiftsByDay = {...shiftsByDay};
+              if (!updatedShiftsByDay[selectedDay]) {
+                updatedShiftsByDay[selectedDay] = [];
+              }
+              updatedShiftsByDay[selectedDay].push(newShift);
+              
+              setShiftsByDay(updatedShiftsByDay);
+              console.log(`Updated shifts by day. Day: ${selectedDay}, Count: ${updatedShiftsByDay[selectedDay].length}`);
+            } else {
+              console.error('API returned invalid data for new shift');
+              
+              // Even though API didn't return a proper ID, still update the UI with a temporary ID
+              const tempId = Date.now();
+              const newShift = {
+                id: tempId,
+                dayOfTheWeek: selectedDay, 
+                startTime: startTime,
+                endTime: endTime,
+                staffId: parseInt(staff.id)
+              };
+              
+              // Add to shifts array
+              const newShiftsArray = [...currentShiftsCopy, newShift];
+              setShifts(newShiftsArray);
+              
+              // Add to shifts by day
+              const updatedShiftsByDay = {...shiftsByDay};
+              if (!updatedShiftsByDay[selectedDay]) {
+                updatedShiftsByDay[selectedDay] = [];
+              }
+              updatedShiftsByDay[selectedDay].push(newShift);
+              setShiftsByDay(updatedShiftsByDay);
+              
+              console.log(`Added temporary shift with ID: ${tempId} to UI state`);
+            }
+          } catch (error) {
+            console.error('Failed to create new shift:', error);
+            
+            // Even on error, update the UI with a temporary ID to provide feedback
             const tempId = Date.now();
             const newShift = {
               id: tempId,
@@ -927,34 +1031,8 @@ function StaffDetailsModal({ visible, staff, onClose, onUpdated, onDeleted }) {
             updatedShiftsByDay[selectedDay].push(newShift);
             setShiftsByDay(updatedShiftsByDay);
             
-            console.log(`Added temporary shift with ID: ${tempId} to UI state`);
+            console.log(`Added temporary shift with ID: ${tempId} to UI state despite API error`);
           }
-        } catch (error) {
-          console.error('Failed to create new shift:', error);
-          
-          // Even on error, update the UI with a temporary ID to provide feedback
-          const tempId = Date.now();
-          const newShift = {
-            id: tempId,
-            dayOfTheWeek: selectedDay, 
-            startTime: startTime,
-            endTime: endTime,
-            staffId: parseInt(staff.id)
-          };
-          
-          // Add to shifts array
-          const newShiftsArray = [...currentShiftsCopy, newShift];
-          setShifts(newShiftsArray);
-          
-          // Add to shifts by day
-          const updatedShiftsByDay = {...shiftsByDay};
-          if (!updatedShiftsByDay[selectedDay]) {
-            updatedShiftsByDay[selectedDay] = [];
-          }
-          updatedShiftsByDay[selectedDay].push(newShift);
-          setShiftsByDay(updatedShiftsByDay);
-          
-          console.log(`Added temporary shift with ID: ${tempId} to UI state despite API error`);
         }
       }
       
@@ -1394,41 +1472,215 @@ function StaffDetailsModal({ visible, staff, onClose, onUpdated, onDeleted }) {
                 </View>
                 
                 {/* Zaman Seçiciler */}
-                <DateTimePickerModal
-                  isVisible={startTimePicker}
-                  mode="time"
-                  onConfirm={(date) => {
-                    console.log("Start time picked:", date);
-                    handleStartTimeChange(date);
-                  }}
-                  onCancel={() => {
-                    console.log("Start time picker cancelled");
-                    hideStartTimePicker();
-                  }}
-                  is24Hour={true}
-                  date={new Date(`2000-01-01T${startTime || '09:00'}`)}
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  themeVariant="light"
-                  textColor="#000000"
-                />
+                {/* Custom Time Pickers */}
                 
-                <DateTimePickerModal
-                  isVisible={endTimePicker}
-                  mode="time"
-                  onConfirm={(date) => {
-                    console.log("End time picked:", date);
-                    handleEndTimeChange(date);
-                  }}
-                  onCancel={() => {
-                    console.log("End time picker cancelled");
-                    hideEndTimePicker();
-                  }}
-                  is24Hour={true}
-                  date={new Date(`2000-01-01T${endTime || '17:00'}`)}
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  themeVariant="light"
-                  textColor="#000000"
-                />
+                {/* Start Time Picker */}
+                <Modal
+                  visible={startTimePicker}
+                  transparent
+                  animationType="fade"
+                >
+                  <View style={styles.timeModalOverlay}>
+                    <View style={styles.timePickerWrapper}>
+                      <View style={styles.timePickerHeader}>
+                        <Text style={styles.timePickerTitle}>Başlangıç Saati</Text>
+                        <TouchableOpacity onPress={hideStartTimePicker}>
+                          <MaterialIcons name="close" size={24} color="#666" />
+                        </TouchableOpacity>
+                      </View>
+                      
+                      <View style={styles.timePickerGrid}>
+                        {/* Saat ve dakika seçimi */}
+                        <View style={styles.timePickerColumns}>
+                          <View style={styles.timePickerColumnHeader}>
+                            <Text style={styles.timePickerColumnLabel}>Saat</Text>
+                          </View>
+                          <ScrollView style={styles.timePickerScroll}>
+                            {['06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22'].map(hour => {
+                              const currentHour = startTime.split(':')[0];
+                              return (
+                                <TouchableOpacity 
+                                  key={`hour-${hour}`}
+                                  style={[
+                                    styles.timePickerGridItem,
+                                    currentHour === hour && styles.timePickerGridItemSelected
+                                  ]}
+                                  onPress={() => {
+                                    const minutes = startTime.split(':')[1] || '00';
+                                    setStartTime(`${hour}:${minutes}`);
+                                  }}
+                                >
+                                  <Text style={[
+                                    styles.timePickerGridItemText,
+                                    currentHour === hour && styles.timePickerGridItemTextSelected
+                                  ]}>
+                                    {hour}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </ScrollView>
+                        </View>
+                        
+                        <View style={styles.timePickerDivider} />
+                        
+                        <View style={styles.timePickerColumns}>
+                          <View style={styles.timePickerColumnHeader}>
+                            <Text style={styles.timePickerColumnLabel}>Dakika</Text>
+                          </View>
+                          <ScrollView style={styles.timePickerScroll}>
+                            {['00', '15', '30', '45'].map(minute => {
+                              const currentMinute = startTime.split(':')[1] || '00';
+                              return (
+                                <TouchableOpacity 
+                                  key={`minute-${minute}`}
+                                  style={[
+                                    styles.timePickerGridItem,
+                                    currentMinute === minute && styles.timePickerGridItemSelected
+                                  ]}
+                                  onPress={() => {
+                                    const hour = startTime.split(':')[0] || '09';
+                                    setStartTime(`${hour}:${minute}`);
+                                  }}
+                                >
+                                  <Text style={[
+                                    styles.timePickerGridItemText,
+                                    currentMinute === minute && styles.timePickerGridItemTextSelected
+                                  ]}>
+                                    {minute}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </ScrollView>
+                        </View>
+                      </View>
+                      
+                      <View style={styles.timePickerPreview}>
+                        <Text style={styles.timePickerPreviewText}>{startTime}</Text>
+                      </View>
+                      
+                      <View style={styles.timePickerFooter}>
+                        <TouchableOpacity 
+                          style={styles.timePickerCancelBtn}
+                          onPress={hideStartTimePicker}
+                        >
+                          <Text style={styles.timePickerCancelText}>İptal</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={styles.timePickerConfirmBtn}
+                          onPress={hideStartTimePicker}
+                        >
+                          <Text style={styles.timePickerConfirmText}>Tamam</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                </Modal>
+                
+                {/* End Time Picker */}
+                <Modal
+                  visible={endTimePicker}
+                  transparent
+                  animationType="fade"
+                >
+                  <View style={styles.timeModalOverlay}>
+                    <View style={styles.timePickerWrapper}>
+                      <View style={styles.timePickerHeader}>
+                        <Text style={styles.timePickerTitle}>Bitiş Saati</Text>
+                        <TouchableOpacity onPress={hideEndTimePicker}>
+                          <MaterialIcons name="close" size={24} color="#666" />
+                        </TouchableOpacity>
+                      </View>
+                      
+                      <View style={styles.timePickerGrid}>
+                        {/* Saat ve dakika seçimi */}
+                        <View style={styles.timePickerColumns}>
+                          <View style={styles.timePickerColumnHeader}>
+                            <Text style={styles.timePickerColumnLabel}>Saat</Text>
+                          </View>
+                          <ScrollView style={styles.timePickerScroll}>
+                            {['06', '07', '08', '09', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22'].map(hour => {
+                              const currentHour = endTime.split(':')[0];
+                              return (
+                                <TouchableOpacity 
+                                  key={`hour-${hour}`}
+                                  style={[
+                                    styles.timePickerGridItem,
+                                    currentHour === hour && styles.timePickerGridItemSelected
+                                  ]}
+                                  onPress={() => {
+                                    const minutes = endTime.split(':')[1] || '00';
+                                    setEndTime(`${hour}:${minutes}`);
+                                  }}
+                                >
+                                  <Text style={[
+                                    styles.timePickerGridItemText,
+                                    currentHour === hour && styles.timePickerGridItemTextSelected
+                                  ]}>
+                                    {hour}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </ScrollView>
+                        </View>
+                        
+                        <View style={styles.timePickerDivider} />
+                        
+                        <View style={styles.timePickerColumns}>
+                          <View style={styles.timePickerColumnHeader}>
+                            <Text style={styles.timePickerColumnLabel}>Dakika</Text>
+                          </View>
+                          <ScrollView style={styles.timePickerScroll}>
+                            {['00', '15', '30', '45'].map(minute => {
+                              const currentMinute = endTime.split(':')[1] || '00';
+                              return (
+                                <TouchableOpacity 
+                                  key={`minute-${minute}`}
+                                  style={[
+                                    styles.timePickerGridItem,
+                                    currentMinute === minute && styles.timePickerGridItemSelected
+                                  ]}
+                                  onPress={() => {
+                                    const hour = endTime.split(':')[0] || '17';
+                                    setEndTime(`${hour}:${minute}`);
+                                  }}
+                                >
+                                  <Text style={[
+                                    styles.timePickerGridItemText,
+                                    currentMinute === minute && styles.timePickerGridItemTextSelected
+                                  ]}>
+                                    {minute}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </ScrollView>
+                        </View>
+                      </View>
+                      
+                      <View style={styles.timePickerPreview}>
+                        <Text style={styles.timePickerPreviewText}>{endTime}</Text>
+                      </View>
+                      
+                      <View style={styles.timePickerFooter}>
+                        <TouchableOpacity 
+                          style={styles.timePickerCancelBtn}
+                          onPress={hideEndTimePicker}
+                        >
+                          <Text style={styles.timePickerCancelText}>İptal</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={styles.timePickerConfirmBtn}
+                          onPress={hideEndTimePicker}
+                        >
+                          <Text style={styles.timePickerConfirmText}>Tamam</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
+                </Modal>
                 
                 {/* Weekly Schedule Display - Grid layout matching web version */}
                 <View style={styles.shiftCard}>
@@ -2430,5 +2682,140 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
     marginLeft: 5,
+  },
+  timeModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  timePickerWrapper: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
+  },
+  timePickerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  timePickerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#3C3169',
+  },
+  timePickerContent: {
+    marginVertical: 15,
+  },
+  timePickerScrollView: {
+    maxHeight: 300,
+  },
+  timePickerFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  timePickerCancelBtn: {
+    backgroundColor: '#ccc',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  timePickerCancelText: {
+    color: '#333',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  timePickerOption: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    backgroundColor: 'white',
+  },
+  timePickerOptionSelected: {
+    backgroundColor: '#f0f5ff',
+  },
+  timePickerOptionText: {
+    fontSize: 16,
+    color: '#3C3169',
+  },
+  timePickerOptionTextSelected: {
+    fontWeight: 'bold',
+    color: '#3C3169',
+  },
+  timePickerGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    height: 280,
+  },
+  timePickerColumns: {
+    flex: 1,
+    marginHorizontal: 5,
+  },
+  timePickerColumnHeader: {
+    marginBottom: 10,
+    alignItems: 'center',
+    padding: 5,
+  },
+  timePickerColumnLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#3C3169',
+  },
+  timePickerScroll: {
+    flex: 1,
+  },
+  timePickerGridItem: {
+    padding: 15,
+    marginVertical: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+    backgroundColor: '#f5f5f5',
+    marginHorizontal: 5,
+  },
+  timePickerGridItemSelected: {
+    backgroundColor: '#e0f2f1',
+    borderColor: '#16A085',
+    borderWidth: 2,
+  },
+  timePickerGridItemText: {
+    fontSize: 18,
+    color: '#3C3169',
+  },
+  timePickerGridItemTextSelected: {
+    fontWeight: 'bold',
+    color: '#16A085',
+  },
+  timePickerDivider: {
+    width: 1,
+    backgroundColor: '#ddd',
+    marginHorizontal: 5,
+  },
+  timePickerPreview: {
+    flex: 1,
+    textAlign: 'right',
+  },
+  timePickerPreviewText: {
+    fontSize: 16,
+    color: '#3C3169',
+  },
+  timePickerConfirmBtn: {
+    backgroundColor: '#16A085',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  timePickerConfirmText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
 }); 
