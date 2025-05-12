@@ -6,30 +6,48 @@ import {
   SafeAreaView, 
   TouchableOpacity, 
   ScrollView,
-  StatusBar 
+  StatusBar, 
+  Alert
 } from 'react-native';
 import { MaterialIcons, FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useAuth } from '../../context/AuthContext';
+import { hasPageAccess } from '../../services/roleService';
 
 export default function OtherScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   
   const navigateToSection = (section) => {
+    let page = '';
+    
     switch(section) {
       case 'Accounting':
-        router.push('/accounting');
+        page = 'accounting';
         break;
       case 'Financial Reports':
-        router.push('/financial-reports');
+        page = 'financial-reports';
         break;
       case 'Manage Staff':
-        router.push('/manage-staff');
+        page = 'manage-staff';
         break;
       case 'Manage Rooms':
-        router.push('/manage-rooms');
+        page = 'manage-rooms';
         break;
       default:
         console.log(`Navigation to ${section} not implemented yet`);
+        return;
+    }
+    
+    // Check if user has permission to access this page
+    if (hasPageAccess(user, page)) {
+      router.push(`/${page}`);
+    } else {
+      // Instead of just showing an alert, navigate to access-denied page
+      router.push({
+        pathname: '/access-denied',
+        params: { returnPath: '/(tabs)/other', page: section }
+      });
     }
   };
   
