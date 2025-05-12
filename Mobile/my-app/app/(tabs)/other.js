@@ -101,29 +101,6 @@ export default function OtherScreen() {
             <Text style={styles.menuItemText}>Oda Yönetimi</Text>
           </TouchableOpacity>
         </View>
-        
-        <Text style={styles.sectionTitle}>Sistem</Text>
-        
-        {/* System Options */}
-        <View style={styles.menuList}>
-          <TouchableOpacity style={styles.listItem}>
-            <MaterialIcons name="settings" size={24} color="#6B3DC9" />
-            <Text style={styles.listItemText}>Ayarlar</Text>
-            <MaterialIcons name="chevron-right" size={24} color="#777" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.listItem}>
-            <MaterialIcons name="help" size={24} color="#6B3DC9" />
-            <Text style={styles.listItemText}>Yardım</Text>
-            <MaterialIcons name="chevron-right" size={24} color="#777" />
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.listItem}>
-            <MaterialIcons name="info" size={24} color="#6B3DC9" />
-            <Text style={styles.listItemText}>Hakkında</Text>
-            <MaterialIcons name="chevron-right" size={24} color="#777" />
-          </TouchableOpacity>
-        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -181,30 +158,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 10,
     textAlign: 'center',
-  },
-  menuList: {
-    backgroundColor: 'white',
-    borderRadius: 10,
-    overflow: 'hidden',
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  listItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  listItemText: {
-    flex: 1,
-    fontSize: 16,
-    marginLeft: 15,
-    color: '#333',
   },
 }); 
