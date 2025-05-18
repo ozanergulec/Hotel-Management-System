@@ -14,6 +14,7 @@ import CheckOut from './components/CheckOut/CheckOut';
 import CustomerInfo from './components/Customers/CustomerInfo';
 import Staff from './components/Staff/Staff';
 import ManageRoom from './components/ManageRoom/ManageRoom'; // Bu bileşenin var olduğunu varsayıyoruz
+import FinancialReports from './components/FinancialReports/FinancialReports'; // Yeni eklenen finansal raporlar bileşeni
 
 // Yetkisiz Erişim Bileşeni (Kullanıcının sağladığı yoldan import edilecek)
 import NotAllowed from './components/common/NotAllowed'; // Kullanıcının NotAllowed.js dosyasının yolu
@@ -28,16 +29,6 @@ const LoadingScreen = () => (
     <Typography sx={{ ml: 2 }}>Yükleniyor...</Typography>
   </Box>
 );
-
-// Örnek Finansal Raporlar Bileşeni (Gerçek bir bileşenle değiştirin)
-const FinancialReports = () => (
-  <Box p={3}>
-    <Typography variant="h4">Finansal Raporlar Sayfası</Typography>
-    <Typography>Bu sayfa Muhasebeci ve Admin (ve SuperAdmin) tarafından görülebilir.</Typography>
-  </Box>
-);
-// --- Bitiş: Yardımcı bileşenler ---
-
 
 // ProtectedRoute: Rol tabanlı erişim kontrolü sağlar
 // Bu bileşen App.js içinde tanımlanacak ve kullanıcının sağladığı mantığı içerecek

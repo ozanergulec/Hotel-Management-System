@@ -27,12 +27,12 @@ const MaintenanceIssues = ({ visible, onClose, room }) => {
     try {
       const response = await roomService.getRoomMaintenanceIssues(room.id);
       setIssues(Array.isArray(response) ? response : []);
-      console.log('Bakım sorunları yüklendi:', response);
+      console.log('Maintenance issues loaded:', response);
     } catch (error) {
-      console.error('Bakım sorunları yüklenirken hata:', error);
+      console.error('Error loading maintenance issues:', error);
       notification.error({
-        message: 'Hata',
-        description: 'Bakım sorunları yüklenirken bir hata oluştu.',
+        message: 'Error',
+        description: 'An error occurred while loading maintenance issues.',
       });
     } finally {
       setLoading(false);
@@ -61,17 +61,17 @@ const MaintenanceIssues = ({ visible, onClose, room }) => {
       await roomService.addMaintenanceIssue(room.id, issueData);
       
       notification.success({
-        message: 'Başarılı',
-        description: 'Bakım sorunu başarıyla eklendi.',
+        message: 'Success',
+        description: 'Maintenance issue added successfully.',
       });
       
       setAddFormVisible(false);
       fetchMaintenanceIssues();
     } catch (error) {
-      console.error('Bakım sorunu eklenirken hata:', error);
+      console.error('Error adding maintenance issue:', error);
       notification.error({
-        message: 'Hata',
-        description: 'Bakım sorunu eklenirken bir hata oluştu.',
+        message: 'Error',
+        description: 'An error occurred while adding the maintenance issue.',
       });
     } finally {
       setLoading(false);
@@ -79,22 +79,22 @@ const MaintenanceIssues = ({ visible, onClose, room }) => {
   };
 
   const handleResolveIssue = async (issueId) => {
-    if (window.confirm('Bu bakım sorununu çözüldü olarak işaretlemek istediğinizden emin misiniz?')) {
+    if (window.confirm('Are you sure you want to mark this issue as resolved?')) {
       setLoading(true);
       try {
         await roomService.resolveMaintenanceIssue(room.id, issueId);
         
         notification.success({
-          message: 'Başarılı',
-          description: 'Bakım sorunu başarıyla çözüldü olarak işaretlendi.',
+          message: 'Success',
+          description: 'Maintenance issue marked as resolved successfully.',
         });
         
         fetchMaintenanceIssues();
       } catch (error) {
-        console.error('Bakım sorunu çözülürken hata:', error);
+        console.error('Error resolving maintenance issue:', error);
         notification.error({
-          message: 'Hata',
-          description: 'Bakım sorunu çözülürken bir hata oluştu.',
+          message: 'Error',
+          description: 'An error occurred while resolving the maintenance issue.',
         });
       } finally {
         setLoading(false);
@@ -104,29 +104,30 @@ const MaintenanceIssues = ({ visible, onClose, room }) => {
 
   const getStatusTag = (status, resolvedDate) => {
     if (status?.toLowerCase() === 'resolved' || resolvedDate) {
-      return <Tag color="success" icon={<CheckCircleOutlined />}>Çözüldü</Tag>;
+      return <Tag color="success" icon={<CheckCircleOutlined />}>Resolved</Tag>;
     }
-    return <Tag color="processing" icon={<ToolOutlined />}>Devam Ediyor</Tag>;
+    return <Tag color="processing" icon={<ToolOutlined />}>In Progress</Tag>;
   };
 
   return (
     <>
       <Modal
-        title={`Oda ${room?.roomNumber} - Bakım Sorunları`}
+        title={<span style={{ color: '#3f2b7b' }}>{`Room ${room?.roomNumber} - Maintenance Issues`}</span>}
         visible={visible}
         onCancel={onClose}
         width={700}
         footer={[
           <Button key="back" onClick={onClose}>
-            Kapat
+            Close
           </Button>,
           <Button 
             key="add" 
             type="primary" 
             icon={<ToolOutlined />} 
             onClick={handleAddIssue}
+            style={{ backgroundColor: '#3f2b7b', borderColor: '#3f2b7b' }}
           >
-            Bakım Sorunu Ekle
+            Add Maintenance Issue
           </Button>,
         ]}
       >
@@ -144,8 +145,9 @@ const MaintenanceIssues = ({ visible, onClose, room }) => {
                         type="primary" 
                         icon={<CheckCircleOutlined />}
                         onClick={() => handleResolveIssue(issue.id)}
+                        style={{ backgroundColor: '#3f2b7b', borderColor: '#3f2b7b' }}
                       >
-                        Çözüldü İşaretle
+                        Mark as Resolved
                       </Button>
                     ] : []
                   }
@@ -153,18 +155,18 @@ const MaintenanceIssues = ({ visible, onClose, room }) => {
                   <List.Item.Meta
                     title={
                       <Space>
-                        <Text strong>{issue.issueDescription || issue.description}</Text>
+                        <Text strong style={{ color: '#3f2b7b' }}>{issue.issueDescription || issue.description}</Text>
                         {getStatusTag(issue.status, issue.resolvedDate)}
                       </Space>
                     }
                     description={
                       <Space direction="vertical">
-                        <Text>Bildirim Tarihi: {moment(issue.reportedDate).format('DD MMMM YYYY')}</Text>
+                        <Text>Report Date: {moment(issue.reportedDate).format('DD MMMM YYYY')}</Text>
                         {issue.estimatedCompletionDate && (
-                          <Text>Tahmini Tamamlanma: {moment(issue.estimatedCompletionDate).format('DD MMMM YYYY')}</Text>
+                          <Text>Estimated Completion: {moment(issue.estimatedCompletionDate).format('DD MMMM YYYY')}</Text>
                         )}
                         {issue.resolvedDate && (
-                          <Text>Çözüm Tarihi: {moment(issue.resolvedDate).format('DD MMMM YYYY')}</Text>
+                          <Text>Resolution Date: {moment(issue.resolvedDate).format('DD MMMM YYYY')}</Text>
                         )}
                       </Space>
                     }
@@ -174,7 +176,7 @@ const MaintenanceIssues = ({ visible, onClose, room }) => {
             />
           ) : (
             <Empty 
-              description="Bu oda için bakım sorunu bulunamadı" 
+              description="No maintenance issues found for this room" 
               image={Empty.PRESENTED_IMAGE_SIMPLE} 
             />
           )}
@@ -182,12 +184,13 @@ const MaintenanceIssues = ({ visible, onClose, room }) => {
       </Modal>
 
       <Modal
-        title="Bakım Sorunu Ekle"
+        title={<span style={{ color: '#3f2b7b' }}>Add Maintenance Issue</span>}
         visible={addFormVisible}
         onCancel={handleAddFormCancel}
         onOk={handleAddFormSubmit}
-        okText="Ekle"
-        cancelText="İptal"
+        okText="Add"
+        cancelText="Cancel"
+        okButtonProps={{ style: { backgroundColor: '#3f2b7b', borderColor: '#3f2b7b' } }}
       >
         <Form
           form={addForm}
@@ -195,19 +198,21 @@ const MaintenanceIssues = ({ visible, onClose, room }) => {
         >
           <Form.Item
             name="issueDescription"
-            label="Sorun Açıklaması"
-            rules={[{ required: true, message: 'Lütfen sorun açıklaması girin!' }]}
+            label="Issue Description"
+            rules={[{ required: true, message: 'Please enter an issue description!' }]}
           >
-            <TextArea rows={4} placeholder="Bakım sorununun açıklamasını girin..." />
+            <TextArea rows={4} />
           </Form.Item>
-          
           <Form.Item
             name="estimatedCompletionDate"
-            label="Tahmini Tamamlanma Tarihi"
-            rules={[{ required: true, message: 'Lütfen tahmini tamamlanma tarihi seçin!' }]}
-            initialValue={moment().add(3, 'days')}
+            label="Estimated Completion Date"
+            rules={[{ required: true, message: 'Please select an estimated completion date!' }]}
           >
-            <DatePicker format="DD/MM/YYYY" style={{ width: '100%' }} />
+            <DatePicker 
+              format="DD/MM/YYYY" 
+              placeholder="Select date"
+              style={{ width: '100%' }}
+            />
           </Form.Item>
         </Form>
       </Modal>

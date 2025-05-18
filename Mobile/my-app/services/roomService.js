@@ -1,8 +1,20 @@
 import axios from 'axios';
 import { getAuthToken } from './api';
+import { Platform } from 'react-native';
 
 // API base URL - should match your backend URL
-const API_BASE_URL = 'http://localhost:5002/api';
+let API_BASE_URL = 'http://localhost:5002/api';
+
+// For Android, localhost doesn't work - use 10.0.2.2 instead which points to the host machine
+if (Platform.OS === 'android') {
+  API_BASE_URL = 'http://10.0.2.2:5002/api';
+}
+
+// Override with your specific IP if needed for testing on physical devices
+// Uncomment and update this line when testing on physical devices:
+// API_BASE_URL = 'http://YOUR_COMPUTER_IP:5002/api';
+
+console.log(`🚀 Room Service API configured with base URL: ${API_BASE_URL} (${Platform.OS})`);
 
 // Create axios instance with default config
 const apiClient = axios.create({
@@ -110,6 +122,32 @@ const roomService = {
     }
   },
 
+  // Create a new room
+  createRoom: async (roomData) => {
+    try {
+      console.log("Creating a new room with data:", roomData);
+      const response = await apiClient.post('/v1/Room', roomData);
+      console.log("Room creation API response:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error creating room:', error.response?.data || error.message);
+      throw error;
+    }
+  },
+
+  // Update an existing room
+  updateRoom: async (id, roomData) => {
+    try {
+      console.log(`Updating room ID ${id} with data:`, roomData);
+      const response = await apiClient.put(`/v1/Room/${id}`, roomData);
+      console.log("Room update API response:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error(`Error updating room ID ${id}:`, error.response?.data || error.message);
+      throw error;
+    }
+  },
+
   // Get calendar view data for the specified date range
   getCalendarViewData: async (params) => {
     if (!params.StartDate || !params.EndDate) {
@@ -205,6 +243,19 @@ const roomService = {
       return response.data;
     } catch (error) {
       console.error(`Error fetching amenities for room ${roomId}:`, error);
+      throw error;
+    }
+  },
+
+  // Delete a room
+  deleteRoom: async (roomId) => {
+    try {
+      console.log(`Deleting room with ID ${roomId}`);
+      const response = await apiClient.delete(`/v1/Room/${roomId}`);
+      console.log('Room deletion response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error(`Error deleting room ${roomId}:`, error.response?.data || error.message);
       throw error;
     }
   },
@@ -324,7 +375,20 @@ const roomService = {
 
     console.log("Formatted room:", formattedRoom.id, formattedRoom.roomNumber);
     return formattedRoom;
-  }
+  },
+
+  // Get maintenance issues for a room
+  getRoomMaintenanceIssues: async (roomId) => {
+    try {
+      console.log(`Fetching maintenance issues for room ID ${roomId}`);
+      const response = await apiClient.get(`/v1/Room/${roomId}/maintenance-issues`);
+      console.log('Maintenance issues response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error(`Error fetching maintenance issues for room ${roomId}:`, error);
+      throw error;
+    }
+  },
 };
 
 export default roomService; 
