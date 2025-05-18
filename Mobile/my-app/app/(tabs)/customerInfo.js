@@ -488,7 +488,7 @@ export default function CustomerInfoScreen() {
               </TouchableOpacity>
             </View>
             
-            <ScrollView style={styles.modalContent}>
+            <ScrollView style={[styles.modalContent, { paddingBottom: 70 }]}>
               <View style={styles.customerDetailHeader}>
                  <View style={[styles.detailAvatar, { backgroundColor: getAvatarColor(displayData.id) }]}>
                    <Text style={styles.detailAvatarText}>{getInitials(customerName)}</Text>
@@ -695,51 +695,51 @@ export default function CustomerInfoScreen() {
                    </Text>
                  </View>
               </View>
-              
-              <View style={styles.actionButtons}>
-                {isEditing ? (
-                  <>
-                    <TouchableOpacity 
-                      style={[styles.actionButton, { backgroundColor: '#FFA000' }]}
-                      onPress={() => {
-                          setIsEditing(false);
-                          setEditingCustomerData({...selectedCustomer, FullName: getFullName(selectedCustomer)});
-                      }}
-                      disabled={isSaving}
-                    >
-                      <MaterialIcons name="cancel" size={20} color="white" />
-                      <Text style={styles.actionButtonText}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.actionButton}
-                      onPress={handleUpdateCustomer}
-                      disabled={isSaving}
-                    >
-                      <MaterialIcons name="save" size={20} color="white" />
-                      <Text style={styles.actionButtonText}>{isSaving ? 'Saving...' : 'Save'}</Text>
-                    </TouchableOpacity>
-                  </>
-                ) : (
-                  <>
-                    <TouchableOpacity 
-                      style={styles.actionButton}
-                      onPress={() => setIsEditing(true)}
-                    >
-                      <MaterialIcons name="edit" size={20} color="white" />
-                      <Text style={styles.actionButtonText}>Edit</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={[styles.actionButton, { backgroundColor: '#F44336' }]}
-                      onPress={() => handleDeleteCustomer(selectedCustomer?.id)}
-                      disabled={isDeleting}
-                    >
-                      <MaterialIcons name="delete" size={20} color="white" />
-                      <Text style={styles.actionButtonText}>{isDeleting ? 'Deleting...' : 'Delete'}</Text>
-                    </TouchableOpacity>
-                  </>
-                )}
-              </View>
             </ScrollView>
+            
+            <View style={styles.floatingActionButtons}>
+              {isEditing ? (
+                <>
+                  <TouchableOpacity 
+                    style={[styles.actionButton, { backgroundColor: '#FFA000' }]}
+                    onPress={() => {
+                        setIsEditing(false);
+                        setEditingCustomerData({...selectedCustomer, FullName: getFullName(selectedCustomer)});
+                    }}
+                    disabled={isSaving}
+                  >
+                    <MaterialIcons name="cancel" size={20} color="white" />
+                    <Text style={styles.actionButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.actionButton}
+                    onPress={handleUpdateCustomer}
+                    disabled={isSaving}
+                  >
+                    <MaterialIcons name="save" size={20} color="white" />
+                    <Text style={styles.actionButtonText}>{isSaving ? 'Saving...' : 'Save'}</Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <TouchableOpacity 
+                    style={styles.actionButton}
+                    onPress={() => setIsEditing(true)}
+                  >
+                    <MaterialIcons name="edit" size={20} color="white" />
+                    <Text style={styles.actionButtonText}>Edit</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={[styles.actionButton, { backgroundColor: '#F44336' }]}
+                    onPress={() => handleDeleteCustomer(selectedCustomer?.id)}
+                    disabled={isDeleting}
+                  >
+                    <MaterialIcons name="delete" size={20} color="white" />
+                    <Text style={styles.actionButtonText}>{isDeleting ? 'Deleting...' : 'Delete'}</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
           </View>
         </View>
       </Modal>
@@ -1212,6 +1212,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+    position: 'relative',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -1369,6 +1370,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 4,
+  },
+  floatingActionButtons: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 15,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+    borderBottomLeftRadius: 10,
+    borderBottomRightRadius: 10,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
   },
   actionButtons: {
     flexDirection: 'row',

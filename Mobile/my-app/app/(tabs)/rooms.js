@@ -2116,10 +2116,12 @@ export default function RoomsScreen() {
               ))}
             </View>
             
-            {/* Room Rows */}
-            <ScrollView style={{ maxHeight: 550 }}>
-              {filteredRoomsByNumber.map((room, roomIndex) => (
-                <View key={`room-${room.roomId || room.id || room.roomNumber}-${roomIndex}`} style={styles.roomRow}>
+            {/* Room Rows - Fully scrollable */}
+            <FlatList
+              data={filteredRoomsByNumber}
+              keyExtractor={(item, index) => `room-${item.roomId || item.id || item.roomNumber}-${index}`}
+              renderItem={({item: room, index: roomIndex}) => (
+                <View style={styles.roomRow}>
                   <View style={styles.roomNumberCell}>
                     <Text style={styles.roomNumberText}>{room.roomNumber}</Text>
                     <Text style={styles.roomTypeIndicator}>{room.roomType}</Text>
@@ -2162,19 +2164,11 @@ export default function RoomsScreen() {
                             // Create a copy of the room with reservation info for the popup
                             const roomForReservation = {
                               ...room,
-                              id: room.roomId || room.id || parseInt(room.roomNumber) || 0, // Önce roomId değerini kullan
+                              id: room.roomId || room.id || parseInt(room.roomNumber) || 0,
                               status: 'available',
                               selectedDate: selectedDateStr,
                               formattedDate: formattedDate
                             };
-                            
-                            // Debug - takvim görünümünde tıklanan oda
-                            console.log("Calendar view clicked room:", JSON.stringify({
-                              roomId: room.roomId,
-                              originalId: room.id,
-                              newId: roomForReservation.id,
-                              roomNumber: room.roomNumber
-                            }, null, 2));
                             
                             // Show room details with reservation option
                             showRoomDetailsForReservation(roomForReservation, date);
@@ -2194,7 +2188,7 @@ export default function RoomsScreen() {
                             }
                             const roomWithDateInfo = {
                               ...room,
-                              status: 'occupied', // GÜNCELLE!
+                              status: 'occupied',
                               selectedDate: formatDateStr(date),
                               formattedDate: formatDateForDisplay(date),
                               selectedDateStatus: status,
@@ -2219,8 +2213,12 @@ export default function RoomsScreen() {
                     );
                   })}
                 </View>
-              ))}
-            </ScrollView>
+              )}
+              showsVerticalScrollIndicator={true}
+              initialNumToRender={10}
+              windowSize={5}
+              style={styles.roomsListContainer}
+            />
           </View>
         </ScrollView>
 
@@ -3468,6 +3466,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
     elevation: 2,
+    flex: 1, // Add flex:1 to allow container to expand
   },
   calendarViewHeader: {
     flexDirection: 'row',
@@ -3501,6 +3500,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f5f5f5',
     borderBottomWidth: 1,
     borderBottomColor: '#ddd',
+    zIndex: 1, // Ensure the header stays on top
   },
   roomNumberCell: {
     width: 80,
@@ -4160,5 +4160,9 @@ const styles = StyleSheet.create({
     borderTopColor: '#eeeeee',
     paddingTop: 15,
     alignItems: 'center',
+  },
+  roomsListContainer: {
+    flexGrow: 1,
+    height: '100%',
   },
 }); 

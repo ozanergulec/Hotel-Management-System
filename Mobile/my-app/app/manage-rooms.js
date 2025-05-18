@@ -496,18 +496,65 @@ export default function ManageRoomsScreen() {
       const response = await roomService.getRoomMaintenanceIssues(room.id);
       console.log('GET /api/v1/Room/{id}/maintenance-issues response:', response);
       
-      // Update state with the fetched maintenance issues
-      if (response && Array.isArray(response.data)) {
-        console.log(`Found ${response.data.length} maintenance issues for room ${room.id}`);
-        setMaintenanceIssues(response.data);
+      // Update state directly with API response data
+      if (response && response.data) {
+        // API returns an object containing "data" property which may be an array or single object
+        if (Array.isArray(response.data)) {
+          setMaintenanceIssues(response.data);
+        } else {
+          // If it's a single object, wrap it in an array
+          setMaintenanceIssues([response.data]);
+        }
       } else {
-        console.log(`No maintenance issues found for room ${room.id}`);
+        // Handle empty response
         setMaintenanceIssues([]);
       }
     } catch (error) {
       console.error(`Error fetching maintenance issues for room ${room.id}:`, error);
-      console.error('Error details:', error.response?.data || error.message);
       setMaintenanceIssues([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Function to handle resolving a maintenance issue
+  const handleResolveIssue = async (issueId) => {
+    try {
+      setLoading(true);
+      
+      console.log(`Resolving maintenance issue ${issueId} for room ${roomForDetails.id}`);
+      
+      // Call API to mark the issue as resolved
+      await roomService.resolveMaintenanceIssue(roomForDetails.id, issueId);
+      
+      console.log('Issue resolved successfully, refreshing maintenance issues');
+      
+      // Refresh room data
+      fetchRooms();
+      
+      // Make GET request to refresh maintenance issues
+      try {
+        const issuesResponse = await roomService.getRoomMaintenanceIssues(roomForDetails.id);
+        console.log('GET /api/v1/Room/{id}/maintenance-issues response after resolve:', issuesResponse);
+        
+        if (issuesResponse && Array.isArray(issuesResponse.data)) {
+          console.log(`Received ${issuesResponse.data.length} maintenance issues after resolution`);
+          setMaintenanceIssues(issuesResponse.data);
+        } else {
+          console.log('No maintenance issues data returned after resolution, setting empty array');
+          setMaintenanceIssues([]);
+        }
+      } catch (error) {
+        console.error('Error refreshing maintenance issues:', error);
+        setMaintenanceIssues([]);
+      }
+      
+      // Show success message
+      alert('Success: Maintenance issue marked as resolved successfully.');
+      
+    } catch (error) {
+      console.error('Error resolving maintenance issue:', error);
+      alert('Error: Failed to resolve maintenance issue. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -1482,45 +1529,41 @@ export default function ManageRoomsScreen() {
                     </View>
                   </View>
                   
-                            <View style={styles.maintenanceSection}>
-            <Text style={styles.maintenanceSectionTitle}>Maintenance Issues</Text>
-            
-            {maintenanceIssues && maintenanceIssues.length > 0 ? (
-              <FlatList
-                data={maintenanceIssues}
-                keyExtractor={(item, index) => (item.id ? item.id.toString() : index.toString())}
-                renderItem={({ item }) => (
-                                      <View style={styles.maintenanceItem}>
-                      <View style={styles.issueMainContent}>
-                        <Text style={styles.issueText}>{item.issueDescription || "Açıklama yok"}</Text>
-                        <View style={styles.inProgressBadge}>
-                          <MaterialIcons name="loop" size={12} color="#1890ff" style={{marginRight: 3}} />
-                          <Text style={styles.inProgressText}>In Progress</Text>
+                  <View style={styles.maintenanceSection}>
+                    <Text style={styles.maintenanceSectionTitle}>Maintenance Issues</Text>
+                    
+                    {maintenanceIssues && maintenanceIssues.length > 0 ? (
+                      maintenanceIssues.map((item, index) => (
+                        <View key={index} style={styles.maintenanceItem}>
+                          <View style={styles.issueMainContent}>
+                            <Text style={styles.issueText}>{item.issueDescription}</Text>
+                            <View style={styles.inProgressBadge}>
+                              <MaterialIcons name="loop" size={12} color="#1890ff" style={{marginRight: 3}} />
+                              <Text style={styles.inProgressText}>In Progress</Text>
+                            </View>
+                          </View>
+                          
+                          <View style={styles.issueDetails}>
+                            <Text style={styles.issueDetailText}>Report Date: {formatToTurkishDate(item.reportDate || new Date())}</Text>
+                            <Text style={styles.issueDetailText}>Estimated Completion: {formatToTurkishDate(item.estimatedCompletionDate)}</Text>
+                          </View>
+                          
+                          <TouchableOpacity 
+                            style={styles.markAsResolvedButton}
+                            onPress={() => handleResolveIssue(item.id)}
+                          >
+                            <MaterialIcons name="check-circle" size={16} color="white" style={{marginRight: 6}} />
+                            <Text style={styles.markAsResolvedText}>Mark as Resolved</Text>
+                          </TouchableOpacity>
                         </View>
+                      ))
+                    ) : (
+                      <View style={styles.emptyMaintenanceContainer}>
+                        <MaterialIcons name="build" size={50} color="#e0e0e0" />
+                        <Text style={styles.emptyMaintenanceText}>Bu oda için bakım sorunu bulunamadı</Text>
                       </View>
-                      
-                      <View style={styles.issueDetails}>
-                        <Text style={styles.issueDetailText}>Report Date: {formatToTurkishDate(item.reportDate || item.createdDate)}</Text>
-                        <Text style={styles.issueDetailText}>Estimated Completion: {formatToTurkishDate(item.estimatedCompletionDate)}</Text>
-                      </View>
-                      
-                      <TouchableOpacity 
-                        style={styles.markAsResolvedButton}
-                        onPress={() => handleResolveIssue(item.id)}
-                      >
-                        <MaterialIcons name="check-circle" size={16} color="white" style={{marginRight: 6}} />
-                        <Text style={styles.markAsResolvedText}>Mark as Resolved</Text>
-                      </TouchableOpacity>
-                    </View>
-                )}
-              />
-            ) : (
-              <View style={styles.emptyMaintenanceContainer}>
-                <MaterialIcons name="build" size={50} color="#e0e0e0" />
-                <Text style={styles.emptyMaintenanceText}>Bu oda için bakım sorunu bulunamadı</Text>
-              </View>
-            )}
-          </View>
+                    )}
+                  </View>
                 </ScrollView>
               ) : (
                 <View style={styles.loadingContainer}>
@@ -2454,59 +2497,28 @@ const styles = StyleSheet.create({
 const formatToTurkishDate = (dateString) => {
   if (!dateString) return 'Belirtilmemiş';
   
-  const date = new Date(dateString);
-  const day = date.getDate();
-  
-  const monthNames = [
-    'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
-    'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
-  ];
-  
-  const month = monthNames[date.getMonth()];
-  const year = date.getFullYear();
-  
-  return `${day} ${month} ${year}`;
-};
-
-// Function to handle resolving a maintenance issue
-const handleResolveIssue = async (issueId) => {
   try {
-    setLoading(true);
+    const date = new Date(dateString);
     
-    console.log(`Resolving maintenance issue ${issueId} for room ${roomForDetails.id}`);
-    
-    // Call API to mark the issue as resolved
-    await roomService.resolveMaintenanceIssue(roomForDetails.id, issueId);
-    
-    console.log('Issue resolved successfully, refreshing maintenance issues');
-    
-    // Refresh room data
-    fetchRooms();
-    
-    // Make GET request to refresh maintenance issues
-    try {
-      const issuesResponse = await roomService.getRoomMaintenanceIssues(roomForDetails.id);
-      console.log('GET /api/v1/Room/{id}/maintenance-issues response after resolve:', issuesResponse);
-      
-      if (issuesResponse && Array.isArray(issuesResponse.data)) {
-        console.log(`Received ${issuesResponse.data.length} maintenance issues after resolution`);
-        setMaintenanceIssues(issuesResponse.data);
-      } else {
-        console.log('No maintenance issues data returned after resolution, setting empty array');
-        setMaintenanceIssues([]);
-      }
-    } catch (error) {
-      console.error('Error refreshing maintenance issues:', error);
-      setMaintenanceIssues([]);
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.log('Invalid date format:', dateString);
+      return 'Geçersiz Tarih';
     }
     
-    // Show success message
-    alert('Success: Maintenance issue marked as resolved successfully.');
+    const day = date.getDate();
     
+    const monthNames = [
+      'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+      'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+    ];
+    
+    const month = monthNames[date.getMonth()];
+    const year = date.getFullYear();
+    
+    return `${day} ${month} ${year}`;
   } catch (error) {
-    console.error('Error resolving maintenance issue:', error);
-    alert('Error: Failed to resolve maintenance issue. Please try again.');
-  } finally {
-    setLoading(false);
+    console.error('Error formatting date:', error);
+    return 'Tarih Hatası';
   }
 };
