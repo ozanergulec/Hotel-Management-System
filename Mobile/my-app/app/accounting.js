@@ -840,83 +840,76 @@ export default function AccountingScreen() {
                     style={styles.closeButton} 
                     onPress={() => setDetailModalVisible(false)}
                   >
-                    <MaterialIcons name="close" size={24} color="#333" />
+                    <MaterialIcons name="close" size={24} color="#fff" />
                   </TouchableOpacity>
                 </View>
                 
                 <ScrollView style={styles.detailModalBody}>
                   {isIncome ? (
-                    // Gelir detayları
-                    <>
-                      <View style={styles.detailSection}>
-                        <View style={styles.detailItem}>
+                    // Improved Income details layout
+                    <View style={styles.detailContainer}>
+                      <View style={styles.detailRow}>
+                        <View style={styles.detailField}>
                           <Text style={styles.detailLabel}>Income Number:</Text>
                           <Text style={styles.detailValue}>{selectedItem.incomeNumber}</Text>
                         </View>
-                        
-                        <View style={styles.detailItem}>
+                        <View style={styles.detailField}>
                           <Text style={styles.detailLabel}>Date:</Text>
                           <Text style={styles.detailValue}>{formatDate(selectedItem.date)}</Text>
                         </View>
                       </View>
                       
-                      <View style={styles.detailSection}>
-                        <View style={styles.detailItem}>
+                      <View style={styles.detailRow}>
+                        <View style={styles.detailField}>
                           <Text style={styles.detailLabel}>Customer Name:</Text>
                           <Text style={styles.detailValue}>{selectedItem.customerName}</Text>
                         </View>
-                        
-                        <View style={styles.detailItem}>
+                        <View style={styles.detailField}>
                           <Text style={styles.detailLabel}>Room Number:</Text>
                           <Text style={styles.detailValue}>{selectedItem.roomNumber || 'N/A'}</Text>
                         </View>
                       </View>
                       
-                      <View style={styles.detailSection}>
-                        <View style={styles.amountDetailItem}>
-                          <Text style={styles.amountLabel}>Amount:</Text>
-                          <Text style={styles.amountValue}>₺{selectedItem.amount.toLocaleString()}</Text>
-                        </View>
+                      <View style={styles.amountContainer}>
+                        <Text style={styles.amountLabel}>Amount:</Text>
+                        <Text style={styles.amountValue}>₺{selectedItem.amount.toLocaleString()}</Text>
                       </View>
-                    </>
+                    </View>
                   ) : (
-                    // Gider detayları
-                    <>
-                      <View style={styles.detailSection}>
-                        <View style={styles.detailItem}>
+                    // Improved Expense details layout
+                    <View style={styles.detailContainer}>
+                      <View style={styles.detailRow}>
+                        <View style={styles.detailField}>
                           <Text style={styles.detailLabel}>Expense Number:</Text>
                           <Text style={styles.detailValue}>{selectedItem.expenseNumber}</Text>
                         </View>
-                        
-                        <View style={styles.detailItem}>
+                        <View style={styles.detailField}>
                           <Text style={styles.detailLabel}>Date:</Text>
                           <Text style={styles.detailValue}>{formatDate(selectedItem.date)}</Text>
                         </View>
                       </View>
                       
-                      <View style={styles.detailSection}>
-                        <View style={styles.detailItem}>
+                      <View style={styles.detailRow}>
+                        <View style={styles.detailField}>
                           <Text style={styles.detailLabel}>Category:</Text>
                           <Text style={styles.detailValue}>{selectedItem.category}</Text>
                         </View>
-                        
-                        <View style={styles.descriptionItem}>
-                          <Text style={styles.detailLabel}>Description:</Text>
-                          <Text style={styles.descriptionValue}>{selectedItem.description || 'N/A'}</Text>
-                        </View>
                       </View>
                       
-                      <View style={styles.detailSection}>
-                        <View style={styles.amountDetailItem}>
-                          <Text style={styles.amountLabel}>Amount:</Text>
-                          <Text style={styles.amountValue}>₺{selectedItem.amount.toLocaleString()}</Text>
-                        </View>
+                      <View style={styles.descriptionContainer}>
+                        <Text style={styles.detailLabel}>Description:</Text>
+                        <Text style={styles.descriptionText}>{selectedItem.description || 'N/A'}</Text>
                       </View>
-                    </>
+                      
+                      <View style={styles.amountContainer}>
+                        <Text style={styles.amountLabel}>Amount:</Text>
+                        <Text style={styles.amountValue}>₺{selectedItem.amount.toLocaleString()}</Text>
+                      </View>
+                    </View>
                   )}
                 </ScrollView>
                 
-                <View style={styles.detailModalFooter}>
+                <View style={styles.actionButtonContainer}>
                   <TouchableOpacity 
                     style={styles.editButton}
                     onPress={() => {
@@ -1863,84 +1856,114 @@ const styles = StyleSheet.create({
   detailModalContent: {
     backgroundColor: '#fff',
     borderRadius: 12,
-    padding: 20,
-    width: '100%',
+    padding: 0,
+    width: '90%',
+    maxWidth: 500,
     maxHeight: '80%',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   detailModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    backgroundColor: '#7e3aed',
+    padding: 15,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
   },
   detailModalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#fff',
+  },
+  closeButton: {
+    padding: 5,
   },
   detailModalBody: {
-    marginBottom: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
   },
-  detailItem: {
+  detailContainer: {
+    marginBottom: 15,
+  },
+  detailRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 15,
+  },
+  detailField: {
+    flex: 1,
+    marginRight: 10,
   },
   detailLabel: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#555',
+    color: '#666',
+    marginBottom: 5,
   },
   detailValue: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#333',
+    fontWeight: '500',
   },
-  amountText: {
+  descriptionContainer: {
+    marginBottom: 15,
+  },
+  descriptionText: {
+    fontSize: 16,
+    color: '#333',
+    fontWeight: '500',
+    marginTop: 5,
+    backgroundColor: '#f9f9f9',
+    padding: 10,
+    borderRadius: 6,
+    borderLeftWidth: 3,
+    borderLeftColor: '#7e3aed',
+  },
+  amountContainer: {
+    backgroundColor: '#f0f8ff',
+    padding: 15,
+    borderRadius: 8,
+    marginTop: 5,
+    marginBottom: 10,
+  },
+  amountLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 5,
+  },
+  amountValue: {
+    fontSize: 22,
     fontWeight: 'bold',
+    color: '#2E7D32',
+    textAlign: 'right',
   },
-  detailModalFooter: {
+  actionButtonContainer: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    padding: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
   },
   editButton: {
     backgroundColor: '#2196F3',
-    padding: 10,
-    borderRadius: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 5,
+    flexDirection: 'row',
+    alignItems: 'center',
     marginRight: 10,
   },
   deleteButton: {
     backgroundColor: '#F44336',
-    padding: 10,
-    borderRadius: 4,
-  },
-  closeButton: {
-    padding: 10,
-  },
-  detailSection: {
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 5,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
-  },
-  amountDetailItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  amountLabel: {
-    fontWeight: 'bold',
-  },
-  amountValue: {
-    fontWeight: 'bold',
-  },
-  descriptionItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  descriptionValue: {
-    fontWeight: 'bold',
   },
 }); 
