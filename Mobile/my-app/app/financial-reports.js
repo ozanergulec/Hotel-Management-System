@@ -94,11 +94,11 @@ export default function FinancialReportsScreen() {
     }
   }, [user]);
   
-  // Get Turkish month names based on month number
-  const getTurkishMonthName = (month) => {
+  // Get month names based on month number
+  const getMonthName = (month) => {
     const monthNames = [
-      'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
-      'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
     ];
     return monthNames[month - 1]; // month is 1-based
   };
@@ -154,7 +154,7 @@ export default function FinancialReportsScreen() {
         const monthlyData = response.data.map(item => ({
           year: item.year,
           month: item.month,
-          monthName: getTurkishMonthName(item.month),
+          monthName: getMonthName(item.month),
           revenue: item.revenue || 0,
           expenses: item.expenses || 0,
           profit: (item.revenue || 0) - (item.expenses || 0),
@@ -194,7 +194,7 @@ export default function FinancialReportsScreen() {
       months.push({
         year,
         month,
-        monthName: getTurkishMonthName(month),
+        monthName: getMonthName(month),
         revenue: Math.floor(Math.random() * 100000) + 50000,
         expenses: Math.floor(Math.random() * 60000) + 30000,
         profit: 0,
@@ -220,10 +220,10 @@ export default function FinancialReportsScreen() {
   
   // Render a table row
   const renderItem = ({ item }) => {
-    // Direct mapping of month number to Turkish month name
+    // Direct mapping of month number to month name
     const monthNames = [
-      'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
-      'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
     ];
     
     // Get month name directly from the month number (1-12)
@@ -248,17 +248,17 @@ export default function FinancialReportsScreen() {
           
           <View style={styles.mobileCardRow}>
             <View style={styles.mobileCardColumn}>
-              <Text style={styles.mobileCardLabel}>Gelir:</Text>
+              <Text style={styles.mobileCardLabel}>Revenue:</Text>
               <Text style={styles.mobileCardValue}>{item.revenue.toLocaleString()} ₺</Text>
             </View>
             <View style={styles.mobileCardColumn}>
-              <Text style={styles.mobileCardLabel}>Gider:</Text>
+              <Text style={styles.mobileCardLabel}>Expenses:</Text>
               <Text style={styles.mobileCardValue}>{item.expenses.toLocaleString()} ₺</Text>
             </View>
           </View>
           
           <View style={styles.mobileCardFooter}>
-            <Text style={styles.mobileCardLabel}>Kar Marjı:</Text>
+            <Text style={styles.mobileCardLabel}>Profit Margin:</Text>
             <Text style={[styles.mobileCardMargin, item.profitMargin < 0 ? styles.negativeProfit : styles.positiveProfit]}>
               %{item.profitMargin}
             </Text>
@@ -291,38 +291,38 @@ export default function FinancialReportsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <MaterialIcons name="arrow-back" size={24} color="white" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Finansal Raporlar</Text>
+        <Text style={styles.headerTitle}>Financial Reports</Text>
         <View style={{ width: 24 }} />
       </View>
       
       {loading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#3C3169" />
-          <Text style={styles.loadingText}>Finansal veriler yükleniyor...</Text>
+          <Text style={styles.loadingText}>Loading financial data...</Text>
         </View>
       ) : error ? (
         <View style={styles.content}>
           <FontAwesome5 name="exclamation-circle" size={80} color="#e74c3c" />
-          <Text style={styles.title}>Hata Oluştu</Text>
+          <Text style={styles.title}>Error Occurred</Text>
           <Text style={styles.subtitle}>{error}</Text>
           <TouchableOpacity 
             style={styles.retryButton}
             onPress={() => setYear(prev => prev)} // This will trigger a re-fetch
           >
-            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+            <Text style={styles.retryButtonText}>Try Again</Text>
           </TouchableOpacity>
         </View>
       ) : financialData.length === 0 ? (
         <View style={styles.content}>
           <FontAwesome5 name="chart-line" size={80} color="#2E86C1" />
-          <Text style={styles.title}>Veri Bulunamadı</Text>
-          <Text style={styles.subtitle}>{year} yılı için finansal veri bulunamadı.</Text>
+          <Text style={styles.title}>No Data Found</Text>
+          <Text style={styles.subtitle}>No financial data found for the year {year}.</Text>
         </View>
       ) : (
         <ScrollView style={styles.scrollContainer}>
           {/* Year selector */}
           <View style={styles.yearSelectorContainer}>
-            <Text style={styles.yearSelectorLabel}>Yıl</Text>
+            <Text style={styles.yearSelectorLabel}>Year</Text>
               <View style={[styles.pickerContainer, Dimensions.get('window').width < 500 ? styles.mobilePickerContainer : null]}>
               <Picker
                 selectedValue={year}
@@ -344,22 +344,22 @@ export default function FinancialReportsScreen() {
                 // Mobile-optimized summary cards
                 <>
                   <View style={styles.mobileSummaryCard}>
-                    <Text style={styles.summaryTitle}>Toplam Gelir ({year})</Text>
+                    <Text style={styles.summaryTitle}>Total Revenue ({year})</Text>
                     <Text style={styles.summaryValueRevenue}>{summaryData.totalRevenue.toLocaleString()} ₺</Text>
                   </View>
                   
                   <View style={styles.mobileSummaryCard}>
-                    <Text style={styles.summaryTitle}>Toplam Gider ({year})</Text>
+                    <Text style={styles.summaryTitle}>Total Expenses ({year})</Text>
                     <Text style={styles.summaryValueExpense}>{summaryData.totalExpenses.toLocaleString()} ₺</Text>
                   </View>
                   
                   <View style={styles.mobileSummaryCard}>
-                    <Text style={styles.summaryTitle}>Net Kar ({year})</Text>
+                    <Text style={styles.summaryTitle}>Net Profit ({year})</Text>
                     <Text style={[styles.summaryValueProfit, summaryData.netProfit < 0 ? styles.negativeProfit : styles.positiveProfit]}>
                       {summaryData.netProfit.toLocaleString()} ₺
                     </Text>
                     <Text style={styles.profitPercentage}>
-                      {summaryData.profitMargin}% toplam gelirden
+                      {summaryData.profitMargin}% of total revenue
                     </Text>
                   </View>
                 </>
@@ -367,22 +367,22 @@ export default function FinancialReportsScreen() {
                 // Desktop view - original cards
                 <>
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryTitle}>Toplam Gelir ({year})</Text>
+              <Text style={styles.summaryTitle}>Total Revenue ({year})</Text>
               <Text style={styles.summaryValueRevenue}>{summaryData.totalRevenue.toLocaleString()} ₺</Text>
             </View>
             
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryTitle}>Toplam Gider ({year})</Text>
+              <Text style={styles.summaryTitle}>Total Expenses ({year})</Text>
               <Text style={styles.summaryValueExpense}>{summaryData.totalExpenses.toLocaleString()} ₺</Text>
             </View>
             
             <View style={styles.summaryCard}>
-              <Text style={styles.summaryTitle}>Net Kar ({year})</Text>
+              <Text style={styles.summaryTitle}>Net Profit ({year})</Text>
               <Text style={[styles.summaryValueProfit, summaryData.netProfit < 0 ? styles.negativeProfit : styles.positiveProfit]}>
                 {summaryData.netProfit.toLocaleString()} ₺
               </Text>
               <Text style={styles.profitPercentage}>
-                {summaryData.profitMargin}% toplam gelirden
+                {summaryData.profitMargin}% of total revenue
               </Text>
             </View>
                 </>
@@ -391,7 +391,7 @@ export default function FinancialReportsScreen() {
           
           {/* Table of monthly data */}
           <View style={styles.tableContainer}>
-            <Text style={styles.tableTitle}>Aylık Finansal Veriler - {year}</Text>
+            <Text style={styles.tableTitle}>Monthly Financial Data - {year}</Text>
             
               {/* Check screen width for responsive design */}
               {Dimensions.get('window').width < 500 ? (
@@ -404,11 +404,11 @@ export default function FinancialReportsScreen() {
                 <>
             {/* Table header */}
             <View style={styles.tableHeader}>
-              <Text style={styles.tableHeaderCell}>Ay</Text>
-              <Text style={styles.tableHeaderCellRight}>Gelir</Text>
-              <Text style={styles.tableHeaderCellRight}>Gider</Text>
-              <Text style={styles.tableHeaderCellRight}>Kar</Text>
-              <Text style={styles.tableHeaderCellRight}>Kar Marjı</Text>
+              <Text style={styles.tableHeaderCell}>Month</Text>
+              <Text style={styles.tableHeaderCellRight}>Revenue</Text>
+              <Text style={styles.tableHeaderCellRight}>Expenses</Text>
+              <Text style={styles.tableHeaderCellRight}>Profit</Text>
+              <Text style={styles.tableHeaderCellRight}>Profit Margin</Text>
             </View>
             
             {/* Table rows */}

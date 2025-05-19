@@ -55,18 +55,22 @@ export default function ManageRoomsScreen() {
   
   // Available statuses and floors
   const statusOptions = [
-    { value: 'all', label: 'Tüm Durumlar' },
-    { value: 'Available', label: 'Müsait' },
-    { value: 'Occupied', label: 'Dolu' },
-    { value: 'Maintenance', label: 'Bakımda' }
+    { value: 'all', label: 'All Statuses' },
+    { value: 'Available', label: 'Available' },
+    { value: 'Occupied', label: 'Occupied' },
+    { value: 'Maintenance', label: 'Under Maintenance' }
   ];
   
   // Get unique floors from rooms
   const getFloorOptions = () => {
-    const floors = [...new Set(rooms.map(room => room.floor))].sort((a, b) => a - b);
+    // Static floor options 0-4 as requested
     return [
-      { value: 'all', label: 'Tüm Katlar' },
-      ...floors.map(floor => ({ value: floor.toString(), label: `${floor}. Kat` }))
+      { value: 'all', label: 'All Floors' },
+      { value: '0', label: 'Floor 0' },
+      { value: '1', label: 'Floor 1' },
+      { value: '2', label: 'Floor 2' },
+      { value: '3', label: 'Floor 3' },
+      { value: '4', label: 'Floor 4' }
     ];
   };
   
@@ -137,11 +141,41 @@ export default function ManageRoomsScreen() {
   const fetchRooms = async () => {
     try {
       setLoading(true);
+      console.log('Fetching all rooms data...');
       const response = await roomService.getAllRooms();
+      
+      // Update rooms data
       setRooms(response.data);
-      setFilteredRooms(response.data);
+      
+      // Update filtered rooms immediately based on current filters
+      let filtered = [...response.data];
+      
+      // Apply current filters
+      if (searchText) {
+        filtered = filtered.filter(room => 
+          room.roomNumber.toString().includes(searchText) || 
+          room.description?.toLowerCase().includes(searchText.toLowerCase())
+        );
+      }
+      
+      if (activeTab !== 'all') {
+        filtered = filtered.filter(room => room.roomType === activeTab);
+      }
+      
+      if (selectedStatus !== 'all') {
+        filtered = filtered.filter(room => room.computedStatus === selectedStatus);
+      }
+      
+      if (selectedFloor !== 'all') {
+        filtered = filtered.filter(room => room.floor.toString() === selectedFloor);
+      }
+      
+      // Update filtered rooms with the newly filtered data
+      setFilteredRooms(filtered);
+      
+      console.log('Room data refreshed successfully');
     } catch (error) {
-      console.error('Odalar yüklenirken hata:', error);
+      console.error('Error loading rooms:', error);
     } finally {
       setLoading(false);
     }
@@ -228,15 +262,15 @@ export default function ManageRoomsScreen() {
     features: []
   });
 
-  // Oda özellikleri için seçenekler
-  const roomFeatures = ['Wi-Fi', 'TV', 'Minibar', 'Klima', 'Balkon', 'Jakuzi', 'Kahve Makinesi'];
+  // Room features options
+  const roomFeatures = ['Wi-Fi', 'TV', 'Minibar', 'Air Conditioning', 'Balcony', 'Jacuzzi', 'Coffee Machine'];
   
-  // Oda türleri
+  // Room types
   const roomTypes = [
-    { value: 'Standard', label: 'Standart' },
-    { value: 'Deluxe', label: 'Delüks' },
-    { value: 'Suite', label: 'Süit' },
-    { value: 'Royal', label: 'Kral Dairesi' }
+    { value: 'Standard', label: 'Standard' },
+    { value: 'Deluxe', label: 'Deluxe' },
+    { value: 'Suite', label: 'Suite' },
+    { value: 'Royal', label: 'Royal Suite' }
   ];
 
   // Dropdown durumları
@@ -763,7 +797,12 @@ export default function ManageRoomsScreen() {
       });
       
       // Show success message and close details modal
-      alert('Bakım sorunu eklendi ve oda bakım durumuna alındı. Lütfen sayfayı yenileyiniz.');
+      alert('Maintenance issue added and room status changed to maintenance.');
+      
+      // Refresh room data without requiring manual refresh
+      fetchRooms();
+      
+      // Close the details modal
       setDetailsModalVisible(false);
       
     } catch (error) {
@@ -979,20 +1018,20 @@ export default function ManageRoomsScreen() {
           <View style={{ width: 24 }} />
         </View>
         
-        <View style={styles.content}>
-          {/* Room type summary cards */}
-          <View style={styles.summaryRow}>
+                  <ScrollView style={styles.content}>
+            {/* Room type summary cards */}
+            <View style={styles.summaryRow}>
             <View style={styles.summaryCard}>
-              <Text style={styles.cardTitle}>Standart</Text>
+              <Text style={styles.cardTitle}>Standard</Text>
               <View style={styles.cardContent}>
                 <View>
-                  <Text style={styles.cardLabel}>Toplam</Text>
+                  <Text style={styles.cardLabel}>Total</Text>
                   <Text style={styles.totalCount}>
                     {rooms.filter(r => r.roomType === 'Standard').length || 0}
                   </Text>
                 </View>
                 <View>
-                  <Text style={styles.cardLabel}>Müsait</Text>
+                  <Text style={styles.cardLabel}>Available</Text>
                   <Text style={styles.availableCount}>
                     {rooms.filter(r => r.roomType === 'Standard' && r.computedStatus === 'Available').length || 0}
                   </Text>
@@ -1001,16 +1040,16 @@ export default function ManageRoomsScreen() {
             </View>
             
             <View style={styles.summaryCard}>
-              <Text style={styles.cardTitle}>Delüks</Text>
+              <Text style={styles.cardTitle}>Deluxe</Text>
               <View style={styles.cardContent}>
                 <View>
-                  <Text style={styles.cardLabel}>Toplam</Text>
+                  <Text style={styles.cardLabel}>Total</Text>
                   <Text style={styles.totalCount}>
                     {rooms.filter(r => r.roomType === 'Deluxe').length || 0}
                   </Text>
                 </View>
                 <View>
-                  <Text style={styles.cardLabel}>Müsait</Text>
+                  <Text style={styles.cardLabel}>Available</Text>
                   <Text style={styles.availableCount}>
                     {rooms.filter(r => r.roomType === 'Deluxe' && r.computedStatus === 'Available').length || 0}
                   </Text>
@@ -1019,16 +1058,16 @@ export default function ManageRoomsScreen() {
             </View>
             
             <View style={styles.summaryCard}>
-              <Text style={styles.cardTitle}>Süit</Text>
+              <Text style={styles.cardTitle}>Suite</Text>
               <View style={styles.cardContent}>
                 <View>
-                  <Text style={styles.cardLabel}>Toplam</Text>
+                  <Text style={styles.cardLabel}>Total</Text>
                   <Text style={styles.totalCount}>
                     {rooms.filter(r => r.roomType === 'Suite').length || 0}
                   </Text>
                 </View>
                 <View>
-                  <Text style={styles.cardLabel}>Müsait</Text>
+                  <Text style={styles.cardLabel}>Available</Text>
                   <Text style={styles.availableCount}>
                     {rooms.filter(r => r.roomType === 'Suite' && r.computedStatus === 'Available').length || 0}
                   </Text>
@@ -1037,16 +1076,16 @@ export default function ManageRoomsScreen() {
             </View>
             
             <View style={styles.summaryCard}>
-              <Text style={styles.cardTitle}>Kral Dairesi</Text>
+              <Text style={styles.cardTitle}>Royal Suite</Text>
               <View style={styles.cardContent}>
                 <View>
-                  <Text style={styles.cardLabel}>Toplam</Text>
+                  <Text style={styles.cardLabel}>Total</Text>
                   <Text style={styles.totalCount}>
                     {rooms.filter(r => r.roomType === 'Royal').length || 0}
                   </Text>
                 </View>
                 <View>
-                  <Text style={styles.cardLabel}>Müsait</Text>
+                  <Text style={styles.cardLabel}>Available</Text>
                   <Text style={styles.availableCount}>
                     {rooms.filter(r => r.roomType === 'Royal' && r.computedStatus === 'Available').length || 0}
                   </Text>
@@ -1061,7 +1100,7 @@ export default function ManageRoomsScreen() {
               <Feather name="search" size={18} color="#999" />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Oda ara..."
+                placeholder="Search rooms..."
                 value={searchText}
                 onChangeText={setSearchText}
               />
@@ -1074,105 +1113,75 @@ export default function ManageRoomsScreen() {
                 style={styles.filterButton}
                 onPress={() => {
                   setFloorDropdownVisible(false);
-                  measureStatusButton();
                   setStatusDropdownVisible(!statusDropdownVisible);
                 }}
               >
                 <Text style={styles.filterButtonText}>
-                  {statusOptions.find(option => option.value === selectedStatus)?.label || 'Tüm Durumlar'}
+                  {statusOptions.find(option => option.value === selectedStatus)?.label || 'All Statuses'}
                 </Text>
                 <Feather name="chevron-down" size={18} color="#999" />
               </TouchableOpacity>
               
-              <Modal
-                transparent={true}
-                visible={statusDropdownVisible}
-                animationType="fade"
-                onRequestClose={() => setStatusDropdownVisible(false)}
-              >
-                <TouchableWithoutFeedback onPress={() => setStatusDropdownVisible(false)}>
-                  <View style={styles.modalOverlay}>
-                    <TouchableWithoutFeedback>
-                      <View style={[styles.modalDropdown, {
-                        top: statusDropdownPosition.top,
-                        left: statusDropdownPosition.left,
-                      }]}>
-                        {statusOptions.map((option) => (
-                          <TouchableOpacity 
-                            key={option.value}
-                            style={[
-                              styles.dropdownItem,
-                              selectedStatus === option.value && styles.selectedDropdownItem
-                            ]}
-                            onPress={() => handleStatusChange(option.value)}
-                          >
-                            <Text style={[
-                              styles.dropdownItemText,
-                              selectedStatus === option.value && styles.selectedDropdownItemText
-                            ]}>
-                              {option.label}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    </TouchableWithoutFeedback>
-                  </View>
-                </TouchableWithoutFeedback>
-              </Modal>
+              {statusDropdownVisible && (
+                <View style={[styles.dropdownList, { zIndex: 2000 }]}>
+                  {statusOptions.map((option) => (
+                    <TouchableOpacity 
+                      key={option.value}
+                      style={[
+                        styles.dropdownItem,
+                        selectedStatus === option.value && styles.selectedDropdownItem
+                      ]}
+                      onPress={() => handleStatusChange(option.value)}
+                    >
+                      <Text style={[
+                        styles.dropdownItemText,
+                        selectedStatus === option.value && styles.selectedDropdownItemText
+                      ]}>
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </View>
             
             {/* Floor filter dropdown */}
-            <View style={styles.dropdownContainer}>
+            <View style={[styles.dropdownContainer, { marginTop: statusDropdownVisible ? 150 : 0 }]}>
               <TouchableOpacity 
                 ref={floorButtonRef}
                 style={styles.filterButton}
                 onPress={() => {
                   setStatusDropdownVisible(false);
-                  measureFloorButton();
                   setFloorDropdownVisible(!floorDropdownVisible);
                 }}
               >
                 <Text style={styles.filterButtonText}>
-                  {getFloorOptions().find(option => option.value === selectedFloor)?.label || 'Tüm Katlar'}
+                  {getFloorOptions().find(option => option.value === selectedFloor)?.label || 'All Floors'}
                 </Text>
                 <Feather name="chevron-down" size={18} color="#999" />
               </TouchableOpacity>
               
-              <Modal
-                transparent={true}
-                visible={floorDropdownVisible}
-                animationType="fade"
-                onRequestClose={() => setFloorDropdownVisible(false)}
-              >
-                <TouchableWithoutFeedback onPress={() => setFloorDropdownVisible(false)}>
-                  <View style={styles.modalOverlay}>
-                    <TouchableWithoutFeedback>
-                      <View style={[styles.modalDropdown, {
-                        top: floorDropdownPosition.top,
-                        left: floorDropdownPosition.left,
-                      }]}>
-                        {getFloorOptions().map((option) => (
-                          <TouchableOpacity 
-                            key={option.value}
-                            style={[
-                              styles.dropdownItem,
-                              selectedFloor === option.value && styles.selectedDropdownItem
-                            ]}
-                            onPress={() => handleFloorChange(option.value)}
-                          >
-                            <Text style={[
-                              styles.dropdownItemText,
-                              selectedFloor === option.value && styles.selectedDropdownItemText
-                            ]}>
-                              {option.label}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    </TouchableWithoutFeedback>
-                  </View>
-                </TouchableWithoutFeedback>
-              </Modal>
+              {floorDropdownVisible && (
+                <View style={[styles.dropdownList, { zIndex: 2000 }]}>
+                  {getFloorOptions().map((option) => (
+                    <TouchableOpacity 
+                      key={option.value}
+                      style={[
+                        styles.dropdownItem,
+                        selectedFloor === option.value && styles.selectedDropdownItem
+                      ]}
+                      onPress={() => handleFloorChange(option.value)}
+                    >
+                      <Text style={[
+                        styles.dropdownItemText,
+                        selectedFloor === option.value && styles.selectedDropdownItemText
+                      ]}>
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </View>
             
             <TouchableOpacity 
@@ -1180,7 +1189,7 @@ export default function ManageRoomsScreen() {
               onPress={() => setNewRoomModalVisible(true)}
             >
               <Feather name="plus" size={18} color="#FFF" />
-              <Text style={styles.addButtonText}>YENİ ODA</Text>
+              <Text style={styles.addButtonText}>NEW ROOM</Text>
             </TouchableOpacity>
           </View>
           
@@ -1192,7 +1201,7 @@ export default function ManageRoomsScreen() {
                 onPress={() => handleTabChange('all')}
               >
                 <Text style={[styles.tabText, activeTab === 'all' && styles.activeTabText]}>
-                  Tüm Odalar
+                  All Rooms
                 </Text>
               </TouchableOpacity>
               
@@ -1201,7 +1210,7 @@ export default function ManageRoomsScreen() {
                 onPress={() => handleTabChange('Standard')}
               >
                 <Text style={[styles.tabText, activeTab === 'Standard' && styles.activeTabText]}>
-                  Standart
+                  Standard
                 </Text>
               </TouchableOpacity>
               
@@ -1210,7 +1219,7 @@ export default function ManageRoomsScreen() {
                 onPress={() => handleTabChange('Deluxe')}
               >
                 <Text style={[styles.tabText, activeTab === 'Deluxe' && styles.activeTabText]}>
-                  Delüks
+                  Deluxe
                 </Text>
               </TouchableOpacity>
               
@@ -1219,7 +1228,7 @@ export default function ManageRoomsScreen() {
                 onPress={() => handleTabChange('Suite')}
               >
                 <Text style={[styles.tabText, activeTab === 'Suite' && styles.activeTabText]}>
-                  Süit
+                  Suite
                 </Text>
               </TouchableOpacity>
             </ScrollView>
@@ -1228,37 +1237,40 @@ export default function ManageRoomsScreen() {
           {/* Room List */}
           {loading ? (
             <View style={styles.loadingContainer}>
-              <Text>Yükleniyor...</Text>
+              <Text>Loading...</Text>
             </View>
           ) : (
             <FlatList
               data={filteredRooms}
-              numColumns={3}
+              numColumns={1} // Single column for mobile
               keyExtractor={item => item.id?.toString() || Math.random().toString()}
+              initialNumToRender={5}
+              showsVerticalScrollIndicator={true}
+              contentContainerStyle={styles.roomListContent}
               renderItem={({ item }) => (
                 <View style={styles.roomCard}>
                   <View style={styles.roomCardHeader}>
-                    <Text style={styles.roomNumber}>Oda {item.roomNumber}</Text>
+                    <Text style={styles.roomNumber}>Room {item.roomNumber}</Text>
                     <View style={styles.roomStatus}>
                       <View style={[styles.statusDot, { 
                         backgroundColor: item.computedStatus === 'Available' ? '#52c41a' : 
                                         item.computedStatus === 'Occupied' ? '#f5222d' : '#faad14' 
                       }]} />
                       <Text style={styles.statusText}>
-                        {item.computedStatus === 'Available' ? 'Müsait' : 
-                         item.computedStatus === 'Occupied' ? 'Dolu' : 'Bakımda'}
+                        {item.computedStatus === 'Available' ? 'Available' : 
+                         item.computedStatus === 'Occupied' ? 'Occupied' : 'Under Maintenance'}
                       </Text>
                     </View>
                   </View>
                   
                   <Text style={styles.roomDetails}>
-                    {item.roomType === 'Standard' ? 'Standart' : 
-                     item.roomType === 'Deluxe' ? 'Delüks' : 
-                     item.roomType === 'Suite' ? 'Süit' : 'Kral Dairesi'} - 
-                    {item.capacity || 2} Kişilik - {item.floor || 1}. Kat
+                    {item.roomType === 'Standard' ? 'Standard' : 
+                     item.roomType === 'Deluxe' ? 'Deluxe' : 
+                     item.roomType === 'Suite' ? 'Suite' : 'Royal Suite'} - 
+                    {item.capacity || 2} Person - Floor {item.floor || 1}
                   </Text>
                   
-                  <Text style={styles.roomPrice}>{item.pricePerNight || 500} ₺ / Gece</Text>
+                  <Text style={styles.roomPrice}>{item.pricePerNight || 500} ₺ / Night</Text>
                   
                   <View style={styles.roomFeatures}>
                     {item.features && item.features.map((feature, index) => (
@@ -1290,17 +1302,16 @@ export default function ManageRoomsScreen() {
                   </View>
                 </View>
               )}
-              contentContainerStyle={styles.roomList}
               ListEmptyComponent={
                 <View style={styles.emptyList}>
                   <MaterialIcons name="meeting-room" size={80} color="#E67E22" />
-                  <Text style={styles.emptyTitle}>Oda Bulunamadı</Text>
-                  <Text style={styles.emptySubtitle}>Arama kriterlerine uygun oda bulunamadı</Text>
+                  <Text style={styles.emptyTitle}>No Rooms Found</Text>
+                  <Text style={styles.emptySubtitle}>No rooms match your search criteria</Text>
                 </View>
               }
             />
           )}
-        </View>
+        </ScrollView>
       </SafeAreaView>
       
       {/* Yeni Oda Ekle Modal */}
@@ -1319,7 +1330,7 @@ export default function ManageRoomsScreen() {
               <TouchableWithoutFeedback>
                 <View style={styles.newRoomModal}>
                   <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>{editMode ? 'Odayı Düzenle' : 'Yeni Oda Ekle'}</Text>
+                    <Text style={styles.modalTitle}>{editMode ? 'Edit Room' : 'Add New Room'}</Text>
                     <TouchableOpacity onPress={() => {
                       setNewRoomModalVisible(false);
                       if (editMode) {
@@ -1346,11 +1357,11 @@ export default function ManageRoomsScreen() {
                     <View style={styles.formGroup}>
                       <Text style={styles.formLabel}>
                         <Text style={styles.required}>* </Text>
-                        Oda Numarası
+                        Room Number
                       </Text>
                       <TextInput
                         style={styles.formInput}
-                        placeholder="Oda numarası giriniz"
+                        placeholder="Enter room number"
                         value={newRoom.roomNumber}
                         onChangeText={(value) => setNewRoom({...newRoom, roomNumber: value})}
                         keyboardType="numeric"
@@ -1361,7 +1372,7 @@ export default function ManageRoomsScreen() {
                     <View style={styles.formGroup}>
                       <Text style={styles.formLabel}>
                         <Text style={styles.required}>* </Text>
-                        Oda Tipi
+                        Room Type
                       </Text>
                       <TouchableOpacity 
                         style={styles.formSelect}
@@ -1372,7 +1383,7 @@ export default function ManageRoomsScreen() {
                         }}
                       >
                         <Text>
-                          {roomTypes.find(t => t.value === newRoom.roomType)?.label || 'Seçiniz'}
+                          {roomTypes.find(t => t.value === newRoom.roomType)?.label || 'Select'}
                         </Text>
                         <MaterialIcons name="arrow-drop-down" size={24} color="#666" />
                       </TouchableOpacity>
@@ -1399,7 +1410,7 @@ export default function ManageRoomsScreen() {
                     <View style={styles.formGroup}>
                       <Text style={styles.formLabel}>
                         <Text style={styles.required}>* </Text>
-                        Kat
+                        Floor
                       </Text>
                       <TouchableOpacity 
                         style={styles.formSelect}
@@ -1424,7 +1435,7 @@ export default function ManageRoomsScreen() {
                                 setFloorDropdownVisible(false);
                               }}
                             >
-                              <Text style={styles.dropdownItemText}>{floor}. Kat</Text>
+                              <Text style={styles.dropdownItemText}>Floor {floor}</Text>
                             </TouchableOpacity>
                           ))}
                         </View>
@@ -1435,7 +1446,7 @@ export default function ManageRoomsScreen() {
                     <View style={styles.formGroup}>
                       <Text style={styles.formLabel}>
                         <Text style={styles.required}>* </Text>
-                        Kapasite
+                        Capacity
                       </Text>
                       <TouchableOpacity 
                         style={styles.formSelect}
@@ -1460,7 +1471,7 @@ export default function ManageRoomsScreen() {
                                 setCapacityDropdownVisible(false);
                               }}
                             >
-                              <Text style={styles.dropdownItemText}>{cap} Kişilik</Text>
+                              <Text style={styles.dropdownItemText}>{cap} Person</Text>
                             </TouchableOpacity>
                           ))}
                         </View>
@@ -1593,7 +1604,7 @@ export default function ManageRoomsScreen() {
           <View style={styles.detailsModalContainer}>
             <View style={styles.detailsModalHeader}>
               <Text style={styles.detailsModalTitle}>
-                Oda {roomForDetails?.roomNumber} - Detaylar
+                Room {roomForDetails?.roomNumber} - Details
               </Text>
               <TouchableOpacity onPress={() => setDetailsModalVisible(false)}>
                 <MaterialIcons name="close" size={24} color="#666" />
@@ -1604,52 +1615,52 @@ export default function ManageRoomsScreen() {
               {roomForDetails ? (
                 <ScrollView>
                   <View style={styles.detailsSection}>
-                    <Text style={styles.detailLabel}>Oda Durumu:</Text>
+                    <Text style={styles.detailLabel}>Room Status:</Text>
                     <View style={styles.statusBadge}>
                       <View style={[styles.statusDot, { 
                         backgroundColor: roomForDetails.computedStatus === 'Available' ? '#52c41a' : 
                                         roomForDetails.computedStatus === 'Occupied' ? '#f5222d' : '#faad14' 
                       }]} />
                       <Text style={styles.statusBadgeText}>
-                        {roomForDetails.computedStatus === 'Available' ? 'Müsait' : 
-                         roomForDetails.computedStatus === 'Occupied' ? 'Dolu' : 'Bakımda'}
+                        {roomForDetails.computedStatus === 'Available' ? 'Available' : 
+                         roomForDetails.computedStatus === 'Occupied' ? 'Occupied' : 'Under Maintenance'}
                       </Text>
                     </View>
                   </View>
                   
                   <View style={styles.detailsSection}>
-                    <Text style={styles.detailLabel}>Oda Tipi:</Text>
+                    <Text style={styles.detailLabel}>Room Type:</Text>
                     <Text style={styles.detailValue}>
-                      {roomForDetails.roomType === 'Standard' ? 'Standart' : 
-                       roomForDetails.roomType === 'Deluxe' ? 'Delüks' : 
-                       roomForDetails.roomType === 'Suite' ? 'Süit' : 'Kral Dairesi'}
+                      {roomForDetails.roomType === 'Standard' ? 'Standard' : 
+                       roomForDetails.roomType === 'Deluxe' ? 'Deluxe' : 
+                       roomForDetails.roomType === 'Suite' ? 'Suite' : 'Royal Suite'}
                     </Text>
                   </View>
                   
                   <View style={styles.detailsSection}>
-                    <Text style={styles.detailLabel}>Kat:</Text>
-                    <Text style={styles.detailValue}>{roomForDetails.floor || 1}. Kat</Text>
+                    <Text style={styles.detailLabel}>Floor:</Text>
+                    <Text style={styles.detailValue}>Floor {roomForDetails.floor || 1}</Text>
                   </View>
                   
                   <View style={styles.detailsSection}>
-                    <Text style={styles.detailLabel}>Kapasite:</Text>
-                    <Text style={styles.detailValue}>{roomForDetails.capacity || 2} Kişilik</Text>
+                    <Text style={styles.detailLabel}>Capacity:</Text>
+                    <Text style={styles.detailValue}>{roomForDetails.capacity || 2} Person</Text>
                   </View>
                   
                   <View style={styles.detailsSection}>
-                    <Text style={styles.detailLabel}>Gecelik Ücret:</Text>
+                    <Text style={styles.detailLabel}>Nightly Rate:</Text>
                     <Text style={styles.detailValue}>{roomForDetails.pricePerNight || 500} ₺</Text>
                   </View>
                   
                   <View style={styles.detailsSection}>
-                    <Text style={styles.detailLabel}>Açıklama:</Text>
+                    <Text style={styles.detailLabel}>Description:</Text>
                     <Text style={styles.detailValue}>
-                      {roomForDetails.description || 'Açıklama bulunmuyor.'}
+                      {roomForDetails.description || 'No description available.'}
                     </Text>
                   </View>
                   
                   <View style={styles.detailsSection}>
-                    <Text style={styles.detailLabel}>Özellikler:</Text>
+                    <Text style={styles.detailLabel}>Features:</Text>
                     <View style={styles.featuresContainer}>
                       {roomForDetails.features && roomForDetails.features.length > 0 ? (
                         roomForDetails.features.map((feature, index) => (
@@ -1658,13 +1669,13 @@ export default function ManageRoomsScreen() {
                           </View>
                         ))
                       ) : (
-                        <Text style={styles.detailValue}>Özellik bulunmuyor.</Text>
+                        <Text style={styles.detailValue}>No features available.</Text>
                       )}
                     </View>
                   </View>
                   
                   <View style={styles.maintenanceSection}>
-                    <Text style={styles.maintenanceSectionTitle}>Bakım Sorunları</Text>
+                    <Text style={styles.maintenanceSectionTitle}>Maintenance Issues</Text>
                     
                     {maintenanceIssues && maintenanceIssues.length > 0 ? (
                       maintenanceIssues.map((item, index) => (
@@ -1692,7 +1703,7 @@ export default function ManageRoomsScreen() {
                     ) : (
                       <View style={styles.emptyMaintenanceContainer}>
                         <MaterialIcons name="build" size={50} color="#e0e0e0" />
-                        <Text style={styles.emptyMaintenanceText}>Bu oda için bakım sorunu bulunamadı</Text>
+                        <Text style={styles.emptyMaintenanceText}>No maintenance issues found for this room</Text>
                       </View>
                     )}
                   </View>
@@ -1709,7 +1720,7 @@ export default function ManageRoomsScreen() {
                 style={styles.closeButton}
                 onPress={() => setDetailsModalVisible(false)}
               >
-                <Text style={styles.closeButtonText}>Kapat</Text>
+                <Text style={styles.closeButtonText}>Close</Text>
               </TouchableOpacity>
               
               <TouchableOpacity 
@@ -1717,7 +1728,7 @@ export default function ManageRoomsScreen() {
                 onPress={handleOpenMaintenanceModal}
               >
                 <MaterialIcons name="build" size={18} color="white" />
-                <Text style={styles.addMaintenanceButtonText}>Bakım Sorunu Ekle</Text>
+                <Text style={styles.addMaintenanceButtonText}>Add Maintenance Issue</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1830,6 +1841,7 @@ const styles = StyleSheet.create({
   },
   summaryRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     marginBottom: 20,
   },
@@ -1837,7 +1849,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 8,
     padding: 15,
-    width: '23%',
+    width: '48%', // 2 cards per row on mobile
+    marginBottom: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -1849,32 +1862,35 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: 12,
     color: '#3f2b7b',
+    textAlign: 'center',
   },
   cardContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    paddingHorizontal: 5,
   },
   cardLabel: {
     fontSize: 14,
     color: '#666',
+    marginBottom: 4,
   },
   totalCount: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#3f2b7b',
   },
   availableCount: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
     color: '#52c41a',
   },
   filtersRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'column',
+    alignItems: 'stretch',
     marginBottom: 20,
-    flexWrap: 'wrap',
+    zIndex: 1000, // Add high z-index to ensure filters stay on top
   },
   searchBox: {
     flexDirection: 'row',
@@ -1882,9 +1898,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 4,
     paddingHorizontal: 10,
-    flex: 1,
+    width: '100%',
     height: 38,
-    marginRight: 10,
     marginBottom: 10,
     borderWidth: 1,
     borderColor: '#ddd',
@@ -1896,14 +1911,15 @@ const styles = StyleSheet.create({
   filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     backgroundColor: 'white',
     borderRadius: 4,
     paddingHorizontal: 10,
     height: 38,
-    marginRight: 10,
     marginBottom: 10,
     borderWidth: 1,
     borderColor: '#ddd',
+    width: '100%',
   },
   filterButtonText: {
     marginRight: 5,
@@ -1912,11 +1928,13 @@ const styles = StyleSheet.create({
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#3f2b7b',
     borderRadius: 4,
     paddingHorizontal: 15,
     height: 38,
     marginBottom: 10,
+    width: '100%',
   },
   addButtonText: {
     color: 'white',
@@ -1929,9 +1947,9 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   tab: {
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    marginRight: 5,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    marginRight: 8,
   },
   activeTab: {
     borderBottomWidth: 2,
@@ -1953,8 +1971,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 15,
     marginBottom: 15,
-    marginRight: 15,
-    width: '31%',
+    marginRight: 0, // Remove right margin for mobile
+    width: '100%', // Full width on mobile
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -2002,15 +2020,15 @@ const styles = StyleSheet.create({
   roomFeatures: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 10,
+    marginBottom: 15,
   },
   featureTag: {
     backgroundColor: '#f0f0f0',
     borderRadius: 4,
     paddingHorizontal: 8,
-    paddingVertical: 3,
-    marginRight: 5,
-    marginBottom: 5,
+    paddingVertical: 5,
+    marginRight: 7,
+    marginBottom: 7,
   },
   featureText: {
     fontSize: 12,
@@ -2018,13 +2036,14 @@ const styles = StyleSheet.create({
   },
   roomActions: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-around',
     borderTopWidth: 1,
     borderTopColor: '#eee',
-    paddingTop: 10,
+    paddingTop: 15,
+    paddingBottom: 5,
   },
   roomAction: {
-    marginLeft: 15,
+    padding: 10,
   },
   emptyList: {
     alignItems: 'center',
@@ -2044,13 +2063,10 @@ const styles = StyleSheet.create({
   },
   dropdown: {
     position: 'absolute',
-    top: 48,
-    left: 0,
     backgroundColor: 'white',
-    borderRadius: 4,
+    borderRadius: 8,
     padding: 5,
-    width: 180,
-    maxHeight: 200,
+    maxHeight: 300,
     zIndex: 9999,
     elevation: 8,
     shadowColor: '#000',
@@ -2078,6 +2094,25 @@ const styles = StyleSheet.create({
   dropdownContainer: {
     position: 'relative',
     zIndex: 1000,
+    marginBottom: 10,
+  },
+  dropdownList: {
+    position: 'absolute',
+    top: 40,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 1001,
+    maxHeight: 200,
+    overflow: 'scroll',
   },
   modalOverlay: {
     flex: 1,
@@ -2094,9 +2129,9 @@ const styles = StyleSheet.create({
   newRoomModal: {
     backgroundColor: 'white',
     borderRadius: 10,
-    width: '90%',
-    maxWidth: 500,
-    maxHeight: '90%',
+    width: '95%',
+    maxWidth: '100%',
+    maxHeight: '95%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -2147,14 +2182,15 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     borderRadius: 6,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
+    paddingVertical: 12,
+    fontSize: 16,
     backgroundColor: 'white',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
+    marginBottom: 5,
   },
   textArea: {
     height: 100,
@@ -2294,9 +2330,9 @@ const styles = StyleSheet.create({
   detailsModalContainer: {
     backgroundColor: 'white',
     borderRadius: 10,
-    width: '90%',
-    maxWidth: 600,
-    maxHeight: '90%',
+    width: '95%',
+    maxWidth: '100%',
+    maxHeight: '95%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -2318,8 +2354,8 @@ const styles = StyleSheet.create({
     color: '#3f2b7b',
   },
   detailsModalContent: {
-    padding: 20,
-    maxHeight: 500,
+    padding: 15,
+    maxHeight: '80%',
   },
   detailsModalFooter: {
     flexDirection: 'row',
@@ -2334,6 +2370,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
     paddingBottom: 16,
+    flexWrap: 'wrap',
   },
   detailLabel: {
     fontSize: 14,
@@ -2430,8 +2467,8 @@ const styles = StyleSheet.create({
   maintenanceModalContainer: {
     backgroundColor: 'white',
     borderRadius: 10,
-    width: '90%',
-    maxWidth: 500,
+    width: '95%',
+    maxWidth: '100%',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

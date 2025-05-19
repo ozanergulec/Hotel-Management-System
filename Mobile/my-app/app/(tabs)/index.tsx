@@ -75,8 +75,10 @@ export default function DashboardScreen() {
           maintenanceRooms: data?.roomSummary?.maintenanceRooms || 0
         },
         checkInOutSummary: {
-          todaysCheckIns: data?.checkInOutSummary?.todaysCheckIns || 0,
-          todaysCheckOuts: data?.checkInOutSummary?.todaysCheckOuts || 0
+          todaysCheckIns: data?.checkInOutSummary?.checkInsToday || 
+                         data?.checkInOutSummary?.todaysCheckIns || 0,
+          todaysCheckOuts: data?.checkInOutSummary?.checkOutsToday || 
+                          data?.checkInOutSummary?.todaysCheckOuts || 0
         },
         revenueSummary: {
           todaysRevenue: data?.revenueSummary?.revenueToday || 

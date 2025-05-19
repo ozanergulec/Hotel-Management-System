@@ -1640,7 +1640,7 @@ export default function RoomsScreen() {
               </TouchableOpacity>
             </View>
             
-            <View style={styles.modalBody}>
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={true}>
               <View style={styles.roomInfoSection}>
                 <Text style={styles.sectionTitle}>Room Features</Text>
                 
@@ -1762,7 +1762,7 @@ export default function RoomsScreen() {
               >
                 <Text style={styles.closeButtonText}>CLOSE</Text>
               </TouchableOpacity>
-            </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -2691,7 +2691,7 @@ export default function RoomsScreen() {
                 style={styles.clearAllTag}
                 onPress={clearAllFilters}
               >
-                <Text style={styles.clearAllText}>Tümünü Temizle</Text>
+                <Text style={styles.clearAllText}>Clear All</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -2785,18 +2785,20 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
-    paddingHorizontal: 15,
-    marginRight: 10,
+    paddingHorizontal: 10,
+    marginRight: 5,
+    flexShrink: 1,
   },
   activeToggle: {
     borderBottomWidth: 2,
     borderBottomColor: '#6B3DC9',
   },
   toggleText: {
-    marginLeft: 5,
+    marginLeft: 3,
     color: '#666',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
+    flexShrink: 1,
   },
   activeToggleText: {
     color: '#6B3DC9',
@@ -2806,14 +2808,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 10,
-    paddingHorizontal: 15,
+    paddingHorizontal: 10,
     marginLeft: 'auto',
+    flexShrink: 1,
   },
   refreshText: {
-    marginLeft: 5,
+    marginLeft: 3,
     color: '#6B3DC9',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
+    flexShrink: 1,
   },
   searchContainer: {
     marginBottom: 15,
@@ -3331,9 +3335,10 @@ const styles = StyleSheet.create({
   clearAllTag: {
     backgroundColor: '#F5F5F5',
     paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 8,
     borderRadius: 15,
     marginLeft: 5,
+    alignSelf: 'flex-start',
   },
   clearAllText: {
     color: '#E53935',
