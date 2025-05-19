@@ -638,7 +638,7 @@ export default function ManageRoomsScreen() {
       // Format data for API - use the correct field names expected by the API
       const issueData = {
         issueDescription: maintenanceIssue.description,
-        estimatedCompletionDate: "2025-05-17T22:22:28.165Z"
+        estimatedCompletionDate: maintenanceIssue.completionDate.toISOString()
       };
       
       console.log('Sending maintenance issue data:', issueData);
@@ -648,42 +648,122 @@ export default function ManageRoomsScreen() {
       
       console.log('Maintenance issue added successfully:', response);
       
-      // Close modal and reset form
+      // --------------------------------------------------------
+      // STEP 1: EXPLICITLY UPDATE ROOM TO MAINTENANCE STATUS
+      // --------------------------------------------------------
+      console.log('Current room details before status update:', roomForDetails);
+      console.log('Current status:', roomForDetails.computedStatus, 'isOnMaintenance:', roomForDetails.isOnMaintenance);
+      
+      try {
+        // Create a minimal update payload focusing only on maintenance status
+        const maintenanceUpdateData = {
+          id: roomForDetails.id,
+          roomNumber: roomForDetails.roomNumber,
+          isOnMaintenance: true
+        };
+        
+        console.log('Sending direct maintenance status update:', maintenanceUpdateData);
+        
+        // Call the API to update the room's maintenance status
+        const updateResponse = await roomService.updateRoom(roomForDetails.id, maintenanceUpdateData);
+        console.log('Room maintenance status update response:', updateResponse);
+        
+        // Also update the local room data to reflect this change immediately
+        setRoomForDetails({
+          ...roomForDetails,
+          isOnMaintenance: true,
+          computedStatus: 'Maintenance'
+        });
+        
+        // --------------------------------------------------------
+        // STEP 2: REFRESH ALL ROOMS DATA TO UPDATE UI
+        // --------------------------------------------------------
+        // First fetch just this room to verify the status change
+        try {
+          const singleRoomResponse = await roomService.getRoom(roomForDetails.id);
+          console.log('Single room refresh response:', singleRoomResponse);
+          console.log('Updated room status:', 
+            singleRoomResponse.data.computedStatus, 
+            'isOnMaintenance:', singleRoomResponse.data.isOnMaintenance
+          );
+        } catch (singleFetchError) {
+          console.error('Error fetching single room:', singleFetchError);
+        }
+        
+        // Now refresh all rooms to update the UI
+        try {
+          console.log('Refreshing all rooms after maintenance update');
+          const allRoomsResponse = await roomService.getAllRooms();
+          
+          // Log the specific room we updated to verify its status changed
+          const updatedRoom = allRoomsResponse.data.find(r => r.id === roomForDetails.id);
+          if (updatedRoom) {
+            console.log('Updated room in all rooms response:', updatedRoom);
+            console.log('Status:', updatedRoom.computedStatus, 'isOnMaintenance:', updatedRoom.isOnMaintenance);
+          } else {
+            console.log('Could not find updated room in all rooms response');
+          }
+          
+          // Update the rooms state which should update the UI
+          setRooms(allRoomsResponse.data);
+          filterRooms(); // Make sure filtered rooms are also updated
+        } catch (refreshError) {
+          console.error('Error refreshing all rooms:', refreshError);
+        }
+      } catch (updateError) {
+        console.error('Error updating room maintenance status:', updateError);
+      }
+      
+      // --------------------------------------------------------
+      // STEP 3: FETCH UPDATED MAINTENANCE ISSUES
+      // --------------------------------------------------------
+      try {
+        console.log(`Fetching updated maintenance issues for room ${roomForDetails.id}`);
+        const issuesResponse = await roomService.getRoomMaintenanceIssues(roomForDetails.id);
+        
+        // Use our comprehensive issue parsing logic
+        let issues = [];
+        if (issuesResponse) {
+          if (Array.isArray(issuesResponse)) {
+            issues = issuesResponse;
+          } else if (issuesResponse.data) {
+            if (Array.isArray(issuesResponse.data)) {
+              issues = issuesResponse.data;
+            } else if (issuesResponse.data.data && Array.isArray(issuesResponse.data.data)) {
+              issues = issuesResponse.data.data;
+            } else if (typeof issuesResponse.data === 'object' && issuesResponse.data !== null) {
+              if (issuesResponse.data.issueDescription) {
+                issues = [issuesResponse.data];
+              } else if (issuesResponse.data.results && Array.isArray(issuesResponse.data.results)) {
+                issues = issuesResponse.data.results;
+              } else if (issuesResponse.data.items && Array.isArray(issuesResponse.data.items)) {
+                issues = issuesResponse.data.items;
+              }
+            }
+          }
+        }
+        
+        if (issues.length > 0) {
+          console.log('Found maintenance issues after update:', issues.length);
+          setMaintenanceIssues(issues);
+        } else {
+          console.log('No maintenance issues found after update');
+          setMaintenanceIssues([]);
+        }
+      } catch (issuesError) {
+        console.error('Error fetching maintenance issues after update:', issuesError);
+        setMaintenanceIssues([]);
+      }
+      
+      // Reset form and close modals
       setMaintenanceModalVisible(false);
       setMaintenanceIssue({
         description: '',
         completionDate: null
       });
       
-      // Refresh room data
-      fetchRooms();
-      
-      // Fetch maintenance issues again with GET /api/v1/Room/{id}/maintenance-issues
-      try {
-        console.log(`Fetching updated maintenance issues for room ${roomForDetails.id}`);
-        
-        // Call API to get maintenance issues
-        const issuesResponse = await roomService.getRoomMaintenanceIssues(roomForDetails.id);
-        console.log('GET /api/v1/Room/{id}/maintenance-issues response:', issuesResponse);
-        
-        // Update state with the fetched maintenance issues
-        if (issuesResponse && Array.isArray(issuesResponse.data)) {
-          console.log(`Received ${issuesResponse.data.length} maintenance issues`);
-          setMaintenanceIssues(issuesResponse.data);
-        } else {
-          console.log('No maintenance issues data returned, setting empty array');
-          setMaintenanceIssues([]);
-        }
-      } catch (error) {
-        console.error('Error refreshing maintenance issues:', error);
-        console.error('Error details:', error.response?.data || error.message);
-        setMaintenanceIssues([]);
-      }
-      
-      // Show success message
-      alert('Success: Maintenance issue has been added successfully.');
-      
-      // Close details modal too
+      // Show success message and close details modal
+      alert('Bakım sorunu eklendi ve oda bakım durumuna alındı. Lütfen sayfayı yenileyiniz.');
       setDetailsModalVisible(false);
       
     } catch (error) {
@@ -694,7 +774,6 @@ export default function ManageRoomsScreen() {
       if (error.response) {
         console.log('Error details:', error.response.status, error.response.data);
         
-        // Custom message based on HTTP status
         if (error.response.status === 401) {
           errorMessage = 'Authentication error. Please log in again.';
         } else if (error.response.status === 400) {
@@ -709,7 +788,6 @@ export default function ManageRoomsScreen() {
         }
       }
       
-      // Show error message
       alert('Error: ' + errorMessage);
     } finally {
       setLoading(false);
