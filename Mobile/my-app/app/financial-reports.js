@@ -286,60 +286,60 @@ export default function FinancialReportsScreen() {
   return (
     <>
       <Stack.Screen options={{ headerShown: false }} />
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <MaterialIcons name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Finansal Raporlar</Text>
-          <View style={{ width: 24 }} />
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <MaterialIcons name="arrow-back" size={24} color="white" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Finansal Raporlar</Text>
+        <View style={{ width: 24 }} />
+      </View>
+      
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#3C3169" />
+          <Text style={styles.loadingText}>Finansal veriler yükleniyor...</Text>
         </View>
-        
-        {loading ? (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#3C3169" />
-            <Text style={styles.loadingText}>Finansal veriler yükleniyor...</Text>
-          </View>
-        ) : error ? (
-          <View style={styles.content}>
-            <FontAwesome5 name="exclamation-circle" size={80} color="#e74c3c" />
-            <Text style={styles.title}>Hata Oluştu</Text>
-            <Text style={styles.subtitle}>{error}</Text>
-            <TouchableOpacity 
-              style={styles.retryButton}
-              onPress={() => setYear(prev => prev)} // This will trigger a re-fetch
-            >
-              <Text style={styles.retryButtonText}>Tekrar Dene</Text>
-            </TouchableOpacity>
-          </View>
-        ) : financialData.length === 0 ? (
-          <View style={styles.content}>
-            <FontAwesome5 name="chart-line" size={80} color="#2E86C1" />
-            <Text style={styles.title}>Veri Bulunamadı</Text>
-            <Text style={styles.subtitle}>{year} yılı için finansal veri bulunamadı.</Text>
-          </View>
-        ) : (
-          <ScrollView style={styles.scrollContainer}>
-            {/* Year selector */}
-            <View style={styles.yearSelectorContainer}>
-              <Text style={styles.yearSelectorLabel}>Yıl</Text>
+      ) : error ? (
+        <View style={styles.content}>
+          <FontAwesome5 name="exclamation-circle" size={80} color="#e74c3c" />
+          <Text style={styles.title}>Hata Oluştu</Text>
+          <Text style={styles.subtitle}>{error}</Text>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={() => setYear(prev => prev)} // This will trigger a re-fetch
+          >
+            <Text style={styles.retryButtonText}>Tekrar Dene</Text>
+          </TouchableOpacity>
+        </View>
+      ) : financialData.length === 0 ? (
+        <View style={styles.content}>
+          <FontAwesome5 name="chart-line" size={80} color="#2E86C1" />
+          <Text style={styles.title}>Veri Bulunamadı</Text>
+          <Text style={styles.subtitle}>{year} yılı için finansal veri bulunamadı.</Text>
+        </View>
+      ) : (
+        <ScrollView style={styles.scrollContainer}>
+          {/* Year selector */}
+          <View style={styles.yearSelectorContainer}>
+            <Text style={styles.yearSelectorLabel}>Yıl</Text>
               <View style={[styles.pickerContainer, Dimensions.get('window').width < 500 ? styles.mobilePickerContainer : null]}>
-                <Picker
-                  selectedValue={year}
-                  onValueChange={(itemValue) => setYear(itemValue)}
+              <Picker
+                selectedValue={year}
+                onValueChange={(itemValue) => setYear(itemValue)}
                   style={[styles.yearPicker, Dimensions.get('window').width < 500 ? styles.mobileYearPicker : null]}
-                  mode="dropdown"
+                mode="dropdown"
                   dropdownIconColor="#7e3aed"
-                >
-                  {availableYears.map((y) => (
-                    <Picker.Item key={y} label={y.toString()} value={y} />
-                  ))}
-                </Picker>
-              </View>
+              >
+                {availableYears.map((y) => (
+                  <Picker.Item key={y} label={y.toString()} value={y} />
+                ))}
+              </Picker>
             </View>
-            
-            {/* Summary Cards */}
-            <View style={styles.summaryContainer}>
+          </View>
+          
+          {/* Summary Cards */}
+          <View style={styles.summaryContainer}>
               {Dimensions.get('window').width < 500 ? (
                 // Mobile-optimized summary cards
                 <>
@@ -366,33 +366,33 @@ export default function FinancialReportsScreen() {
               ) : (
                 // Desktop view - original cards
                 <>
-                  <View style={styles.summaryCard}>
-                    <Text style={styles.summaryTitle}>Toplam Gelir ({year})</Text>
-                    <Text style={styles.summaryValueRevenue}>{summaryData.totalRevenue.toLocaleString()} ₺</Text>
-                  </View>
-                  
-                  <View style={styles.summaryCard}>
-                    <Text style={styles.summaryTitle}>Toplam Gider ({year})</Text>
-                    <Text style={styles.summaryValueExpense}>{summaryData.totalExpenses.toLocaleString()} ₺</Text>
-                  </View>
-                  
-                  <View style={styles.summaryCard}>
-                    <Text style={styles.summaryTitle}>Net Kar ({year})</Text>
-                    <Text style={[styles.summaryValueProfit, summaryData.netProfit < 0 ? styles.negativeProfit : styles.positiveProfit]}>
-                      {summaryData.netProfit.toLocaleString()} ₺
-                    </Text>
-                    <Text style={styles.profitPercentage}>
-                      {summaryData.profitMargin}% toplam gelirden
-                    </Text>
-                  </View>
-                </>
-              )}
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryTitle}>Toplam Gelir ({year})</Text>
+              <Text style={styles.summaryValueRevenue}>{summaryData.totalRevenue.toLocaleString()} ₺</Text>
             </View>
             
-            {/* Table of monthly data */}
-            <View style={styles.tableContainer}>
-              <Text style={styles.tableTitle}>Aylık Finansal Veriler - {year}</Text>
-              
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryTitle}>Toplam Gider ({year})</Text>
+              <Text style={styles.summaryValueExpense}>{summaryData.totalExpenses.toLocaleString()} ₺</Text>
+            </View>
+            
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryTitle}>Net Kar ({year})</Text>
+              <Text style={[styles.summaryValueProfit, summaryData.netProfit < 0 ? styles.negativeProfit : styles.positiveProfit]}>
+                {summaryData.netProfit.toLocaleString()} ₺
+              </Text>
+              <Text style={styles.profitPercentage}>
+                {summaryData.profitMargin}% toplam gelirden
+              </Text>
+            </View>
+                </>
+              )}
+          </View>
+          
+          {/* Table of monthly data */}
+          <View style={styles.tableContainer}>
+            <Text style={styles.tableTitle}>Aylık Finansal Veriler - {year}</Text>
+            
               {/* Check screen width for responsive design */}
               {Dimensions.get('window').width < 500 ? (
                 // Mobile view - we'll use cards layout instead of table
@@ -402,23 +402,23 @@ export default function FinancialReportsScreen() {
               ) : (
                 // Desktop view - traditional table
                 <>
-                  {/* Table header */}
-                  <View style={styles.tableHeader}>
-                    <Text style={styles.tableHeaderCell}>Ay</Text>
-                    <Text style={styles.tableHeaderCellRight}>Gelir</Text>
-                    <Text style={styles.tableHeaderCellRight}>Gider</Text>
-                    <Text style={styles.tableHeaderCellRight}>Kar</Text>
-                    <Text style={styles.tableHeaderCellRight}>Kar Marjı</Text>
-                  </View>
-                  
-                  {/* Table rows */}
-                  {financialData.map((item) => renderItem({ item }))}
+            {/* Table header */}
+            <View style={styles.tableHeader}>
+              <Text style={styles.tableHeaderCell}>Ay</Text>
+              <Text style={styles.tableHeaderCellRight}>Gelir</Text>
+              <Text style={styles.tableHeaderCellRight}>Gider</Text>
+              <Text style={styles.tableHeaderCellRight}>Kar</Text>
+              <Text style={styles.tableHeaderCellRight}>Kar Marjı</Text>
+            </View>
+            
+            {/* Table rows */}
+            {financialData.map((item) => renderItem({ item }))}
                 </>
               )}
-            </View>
-          </ScrollView>
-        )}
-      </SafeAreaView>
+          </View>
+        </ScrollView>
+      )}
+    </SafeAreaView>
     </>
   );
 }

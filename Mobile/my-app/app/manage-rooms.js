@@ -56,7 +56,7 @@ export default function ManageRoomsScreen() {
   // Available statuses and floors
   const statusOptions = [
     { value: 'all', label: 'Tüm Durumlar' },
-    { value: 'Available', label: 'Hazır' },
+    { value: 'Available', label: 'Müsait' },
     { value: 'Occupied', label: 'Dolu' },
     { value: 'Maintenance', label: 'Bakımda' }
   ];
@@ -167,7 +167,7 @@ export default function ManageRoomsScreen() {
     
     // Status filter
     if (selectedStatus !== 'all') {
-      filtered = filtered.filter(room => room.status === selectedStatus);
+      filtered = filtered.filter(room => room.computedStatus === selectedStatus);
     }
     
     // Floor filter
@@ -373,7 +373,7 @@ export default function ManageRoomsScreen() {
         pricePerNight: parseFloat(newRoom.pricePerNight),
         description: newRoom.description || '',
         features: newRoom.features,
-        isOnMaintenance: selectedRoom.status === 'Maintenance'
+        isOnMaintenance: selectedRoom.computedStatus === 'Maintenance'
       };
       
       console.log('API\'ye gönderilecek güncellenmiş oda verisi:', roomData);
@@ -487,7 +487,7 @@ export default function ManageRoomsScreen() {
     setRoomForDetails(room);
     setDetailsModalVisible(true);
     
-    // Fetch maintenance issues for this room with GET /api/v1/Room/{id}/maintenance-issues
+          // Fetch maintenance issues for this room with GET /api/v1/Room/{id}/maintenance-issues
     try {
       setLoading(true);
       console.log(`Fetching maintenance issues for room ID ${room.id}`);
@@ -496,17 +496,73 @@ export default function ManageRoomsScreen() {
       const response = await roomService.getRoomMaintenanceIssues(room.id);
       console.log('GET /api/v1/Room/{id}/maintenance-issues response:', response);
       
-      // Update state directly with API response data
-      if (response && response.data) {
-        // API returns an object containing "data" property which may be an array or single object
-        if (Array.isArray(response.data)) {
-          setMaintenanceIssues(response.data);
-        } else {
-          // If it's a single object, wrap it in an array
-          setMaintenanceIssues([response.data]);
+      // Add more detailed debugging
+      console.log('Full response:', JSON.stringify(response, null, 2));
+      
+      let issues = [];
+      
+      // Comprehensive response structure handling
+      if (response) {
+        // Case 1: Response is an array directly
+        if (Array.isArray(response)) {
+          console.log('Response is an array with length:', response.length);
+          issues = response;
+        } 
+        // Case 2: Response has a data property
+        else if (response.data) {
+          console.log('Response has data property, type:', typeof response.data);
+          
+          // Case 2a: response.data is an array
+          if (Array.isArray(response.data)) {
+            console.log('Data is an array with length:', response.data.length);
+            issues = response.data;
+          } 
+          // Case 2b: response.data has a nested data property
+          else if (response.data.data && Array.isArray(response.data.data)) {
+            console.log('Data.data is an array with length:', response.data.data.length);
+            issues = response.data.data;
+          }
+          // Case 2c: response.data is a single object (not an array)
+          else if (typeof response.data === 'object' && response.data !== null) {
+            console.log('Data is a single object');
+            
+            // Check if it has issueDescription which would indicate it's a maintenance issue
+            if (response.data.issueDescription) {
+              console.log('Data is a maintenance issue object');
+              issues = [response.data];
+            }
+            // It could have a different structure with results array
+            else if (response.data.results && Array.isArray(response.data.results)) {
+              console.log('Data has results array with length:', response.data.results.length);
+              issues = response.data.results;
+            }
+            // Check if it has items array
+            else if (response.data.items && Array.isArray(response.data.items)) {
+              console.log('Data has items array with length:', response.data.items.length);
+              issues = response.data.items;
+            }
+            // Check if any key in the object is an array
+            else {
+              const arrayProps = Object.keys(response.data).filter(key => 
+                Array.isArray(response.data[key]) && response.data[key].length > 0
+              );
+              
+              if (arrayProps.length > 0) {
+                console.log('Found array property:', arrayProps[0], 'with length:', response.data[arrayProps[0]].length);
+                issues = response.data[arrayProps[0]];
+              }
+            }
+          }
         }
+      }
+      
+      // Final processing of found issues
+      if (issues.length > 0) {
+        console.log('Found', issues.length, 'maintenance issues');
+        console.log('Sample issue:', JSON.stringify(issues[0], null, 2));
+        setMaintenanceIssues(issues);
       } else {
-        // Handle empty response
+        console.log('No maintenance issues found after all checks');
         setMaintenanceIssues([]);
       }
     } catch (error) {
@@ -860,7 +916,7 @@ export default function ManageRoomsScreen() {
                 <View>
                   <Text style={styles.cardLabel}>Müsait</Text>
                   <Text style={styles.availableCount}>
-                    {rooms.filter(r => r.roomType === 'Standard' && r.status === 'Available').length || 0}
+                    {rooms.filter(r => r.roomType === 'Standard' && r.computedStatus === 'Available').length || 0}
                   </Text>
                 </View>
               </View>
@@ -878,7 +934,7 @@ export default function ManageRoomsScreen() {
                 <View>
                   <Text style={styles.cardLabel}>Müsait</Text>
                   <Text style={styles.availableCount}>
-                    {rooms.filter(r => r.roomType === 'Deluxe' && r.status === 'Available').length || 0}
+                    {rooms.filter(r => r.roomType === 'Deluxe' && r.computedStatus === 'Available').length || 0}
                   </Text>
                 </View>
               </View>
@@ -896,7 +952,7 @@ export default function ManageRoomsScreen() {
                 <View>
                   <Text style={styles.cardLabel}>Müsait</Text>
                   <Text style={styles.availableCount}>
-                    {rooms.filter(r => r.roomType === 'Suite' && r.status === 'Available').length || 0}
+                    {rooms.filter(r => r.roomType === 'Suite' && r.computedStatus === 'Available').length || 0}
                   </Text>
                 </View>
               </View>
@@ -914,7 +970,7 @@ export default function ManageRoomsScreen() {
                 <View>
                   <Text style={styles.cardLabel}>Müsait</Text>
                   <Text style={styles.availableCount}>
-                    {rooms.filter(r => r.roomType === 'Royal' && r.status === 'Available').length || 0}
+                    {rooms.filter(r => r.roomType === 'Royal' && r.computedStatus === 'Available').length || 0}
                   </Text>
                 </View>
               </View>
@@ -1107,12 +1163,12 @@ export default function ManageRoomsScreen() {
                     <Text style={styles.roomNumber}>Oda {item.roomNumber}</Text>
                     <View style={styles.roomStatus}>
                       <View style={[styles.statusDot, { 
-                        backgroundColor: item.status === 'Available' ? '#52c41a' : 
-                                        item.status === 'Occupied' ? '#f5222d' : '#faad14' 
+                        backgroundColor: item.computedStatus === 'Available' ? '#52c41a' : 
+                                        item.computedStatus === 'Occupied' ? '#f5222d' : '#faad14' 
                       }]} />
                       <Text style={styles.statusText}>
-                        {item.status === 'Available' ? 'Hazır' : 
-                         item.status === 'Occupied' ? 'Dolu' : 'Bakımda'}
+                        {item.computedStatus === 'Available' ? 'Müsait' : 
+                         item.computedStatus === 'Occupied' ? 'Dolu' : 'Bakımda'}
                       </Text>
                     </View>
                   </View>
@@ -1473,12 +1529,12 @@ export default function ManageRoomsScreen() {
                     <Text style={styles.detailLabel}>Oda Durumu:</Text>
                     <View style={styles.statusBadge}>
                       <View style={[styles.statusDot, { 
-                        backgroundColor: roomForDetails.status === 'Available' ? '#52c41a' : 
-                                        roomForDetails.status === 'Occupied' ? '#f5222d' : '#faad14' 
+                        backgroundColor: roomForDetails.computedStatus === 'Available' ? '#52c41a' : 
+                                        roomForDetails.computedStatus === 'Occupied' ? '#f5222d' : '#faad14' 
                       }]} />
                       <Text style={styles.statusBadgeText}>
-                        {roomForDetails.status === 'Available' ? 'Hazır' : 
-                         roomForDetails.status === 'Occupied' ? 'Dolu' : 'Bakımda'}
+                        {roomForDetails.computedStatus === 'Available' ? 'Müsait' : 
+                         roomForDetails.computedStatus === 'Occupied' ? 'Dolu' : 'Bakımda'}
                       </Text>
                     </View>
                   </View>
@@ -1530,29 +1586,27 @@ export default function ManageRoomsScreen() {
                   </View>
                   
                   <View style={styles.maintenanceSection}>
-                    <Text style={styles.maintenanceSectionTitle}>Maintenance Issues</Text>
+                    <Text style={styles.maintenanceSectionTitle}>Bakım Sorunları</Text>
                     
                     {maintenanceIssues && maintenanceIssues.length > 0 ? (
                       maintenanceIssues.map((item, index) => (
                         <View key={index} style={styles.maintenanceItem}>
-                          <View style={styles.issueMainContent}>
-                            <Text style={styles.issueText}>{item.issueDescription}</Text>
+                          <View style={styles.maintenanceHeader}>
+                            <Text style={styles.issueTitle}>{item.issueDescription}</Text>
                             <View style={styles.inProgressBadge}>
-                              <MaterialIcons name="loop" size={12} color="#1890ff" style={{marginRight: 3}} />
+                              <Feather name="edit-2" size={14} color="#1890ff" />
                               <Text style={styles.inProgressText}>In Progress</Text>
                             </View>
                           </View>
                           
-                          <View style={styles.issueDetails}>
-                            <Text style={styles.issueDetailText}>Report Date: {formatToTurkishDate(item.reportDate || new Date())}</Text>
-                            <Text style={styles.issueDetailText}>Estimated Completion: {formatToTurkishDate(item.estimatedCompletionDate)}</Text>
-                          </View>
+                          <Text style={styles.issueDetailText}>Report Date: {formatToTurkishDate(item.reportDate || new Date())}</Text>
+                          <Text style={styles.issueDetailText}>Estimated Completion: {formatToTurkishDate(item.estimatedCompletionDate)}</Text>
                           
                           <TouchableOpacity 
                             style={styles.markAsResolvedButton}
                             onPress={() => handleResolveIssue(item.id)}
                           >
-                            <MaterialIcons name="check-circle" size={16} color="white" style={{marginRight: 6}} />
+                            <MaterialIcons name="check" size={16} color="white" style={{marginRight: 5}} />
                             <Text style={styles.markAsResolvedText}>Mark as Resolved</Text>
                           </TouchableOpacity>
                         </View>
@@ -2245,21 +2299,16 @@ const styles = StyleSheet.create({
     color: '#333',
   },
   maintenanceSection: {
-    marginTop: 16,
-    backgroundColor: 'white',
-    borderRadius: 8,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#e9e9e9',
+    marginTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+    paddingTop: 20,
   },
   maintenanceSectionTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
     color: '#3f2b7b',
-    marginBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    paddingBottom: 10,
+    marginBottom: 20,
   },
   emptyMaintenanceContainer: {
     alignItems: 'center',
@@ -2437,59 +2486,57 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   maintenanceItem: {
-    paddingVertical: 16,
+    marginBottom: 30,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    paddingBottom: 16,
+    borderBottomColor: '#eaeaea',
+    paddingBottom: 20,
   },
-  issueMainContent: {
+  maintenanceHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 12,
+    alignItems: 'center',
+    marginBottom: 15,
   },
-  issueText: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    flex: 1,
+  issueTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#52307c',
   },
   inProgressBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#e6f7ff',
-    borderRadius: 16,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
     borderColor: '#91d5ff',
     borderWidth: 1,
-    marginLeft: 8,
+    borderRadius: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   inProgressText: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#1890ff',
-  },
-  issueDetails: {
-    marginBottom: 12,
+    marginLeft: 5,
   },
   issueDetailText: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 5,
+    marginBottom: 10,
   },
   markAsResolvedButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#3f2b7b',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    width: '80%',
-    alignSelf: 'center',
+    borderRadius: 4,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    marginTop: 10,
+    alignSelf: 'flex-start',
   },
   markAsResolvedText: {
     color: 'white',
-    fontSize: 14,
     fontWeight: '500',
+    fontSize: 14,
   },
 });
 
@@ -2498,7 +2545,7 @@ const formatToTurkishDate = (dateString) => {
   if (!dateString) return 'Belirtilmemiş';
   
   try {
-    const date = new Date(dateString);
+  const date = new Date(dateString);
     
     // Check if date is valid
     if (isNaN(date.getTime())) {
@@ -2506,18 +2553,18 @@ const formatToTurkishDate = (dateString) => {
       return 'Geçersiz Tarih';
     }
     
-    const day = date.getDate();
-    
-    const monthNames = [
-      'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
-      'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
-    ];
-    
-    const month = monthNames[date.getMonth()];
-    const year = date.getFullYear();
-    
-    return `${day} ${month} ${year}`;
-  } catch (error) {
+  const day = date.getDate();
+  
+  const monthNames = [
+    'Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran',
+    'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'
+  ];
+  
+  const month = monthNames[date.getMonth()];
+  const year = date.getFullYear();
+  
+  return `${day} ${month} ${year}`;
+    } catch (error) {
     console.error('Error formatting date:', error);
     return 'Tarih Hatası';
   }

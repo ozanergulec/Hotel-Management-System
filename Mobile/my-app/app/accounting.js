@@ -1175,31 +1175,31 @@ export default function AccountingScreen() {
             // Mobil cihazlar için 2x2 grid görünüm
             <>
               <View style={styles.summaryRow}>
-                <View style={styles.summaryCard}>
-                  <Text style={styles.summaryTitle}>Daily Income</Text>
-                  <Text style={[styles.summaryAmount, styles.incomeAmount]}>₺{dailyIncome.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</Text>
-                  <Text style={styles.summaryDate}>{format(currentDate, 'dd.MM.yyyy')}</Text>
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryTitle}>Daily Income</Text>
+            <Text style={[styles.summaryAmount, styles.incomeAmount]}>₺{dailyIncome.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</Text>
+            <Text style={styles.summaryDate}>{format(currentDate, 'dd.MM.yyyy')}</Text>
+          </View>
+          
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryTitle}>Daily Expense</Text>
+            <Text style={[styles.summaryAmount, styles.expenseAmount]}>₺{dailyExpense.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</Text>
+            <Text style={styles.summaryDate}>{format(currentDate, 'dd.MM.yyyy')}</Text>
                 </View>
-                
-                <View style={styles.summaryCard}>
-                  <Text style={styles.summaryTitle}>Daily Expense</Text>
-                  <Text style={[styles.summaryAmount, styles.expenseAmount]}>₺{dailyExpense.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</Text>
-                  <Text style={styles.summaryDate}>{format(currentDate, 'dd.MM.yyyy')}</Text>
-                </View>
-              </View>
-              
+          </View>
+          
               <View style={styles.summaryRow}>
-                <View style={styles.summaryCard}>
-                  <Text style={styles.summaryTitle}>Weekly Income</Text>
-                  <Text style={[styles.summaryAmount, styles.incomeAmount]}>₺{weeklyIncome.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</Text>
-                  <Text style={styles.summaryDate}>Last 7 days</Text>
-                </View>
-                
-                <View style={styles.summaryCard}>
-                  <Text style={styles.summaryTitle}>Weekly Expense</Text>
-                  <Text style={[styles.summaryAmount, styles.expenseAmount]}>₺{weeklyExpense.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</Text>
-                  <Text style={styles.summaryDate}>Last 7 days</Text>
-                </View>
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryTitle}>Weekly Income</Text>
+            <Text style={[styles.summaryAmount, styles.incomeAmount]}>₺{weeklyIncome.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</Text>
+            <Text style={styles.summaryDate}>Last 7 days</Text>
+          </View>
+          
+          <View style={styles.summaryCard}>
+            <Text style={styles.summaryTitle}>Weekly Expense</Text>
+            <Text style={[styles.summaryAmount, styles.expenseAmount]}>₺{weeklyExpense.toLocaleString('tr-TR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</Text>
+            <Text style={styles.summaryDate}>Last 7 days</Text>
+          </View>
               </View>
             </>
           ) : (
@@ -1253,36 +1253,36 @@ export default function AccountingScreen() {
           {isMobile ? (
             // Mobil görünüm - arama ve buton alt alta
             <>
-              <View style={styles.searchContainer}>
-                <Feather name="search" size={18} color="#777" style={styles.searchIcon} />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder={`Search ${activeTab}`}
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                />
-                {searchQuery ? (
-                  <TouchableOpacity onPress={() => setSearchQuery('')}>
-                    <Feather name="x" size={18} color="#777" />
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-              
-              <TouchableOpacity 
-                style={styles.addButton}
-                onPress={() => {
-                  if (activeTab === 'incomes') {
-                    setIncomeModalVisible(true);
-                  } else {
-                    setExpenseModalVisible(true);
-                  }
-                }}
-              >
-                <Feather name="plus" size={18} color="#fff" />
-                <Text style={styles.addButtonText}>
-                  Add {activeTab === 'incomes' ? 'Income' : 'Expense'}
-                </Text>
+          <View style={styles.searchContainer}>
+            <Feather name="search" size={18} color="#777" style={styles.searchIcon} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder={`Search ${activeTab}`}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery ? (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Feather name="x" size={18} color="#777" />
               </TouchableOpacity>
+            ) : null}
+          </View>
+          
+          <TouchableOpacity 
+            style={styles.addButton}
+            onPress={() => {
+              if (activeTab === 'incomes') {
+                setIncomeModalVisible(true);
+              } else {
+                setExpenseModalVisible(true);
+              }
+            }}
+          >
+            <Feather name="plus" size={18} color="#fff" />
+            <Text style={styles.addButtonText}>
+              Add {activeTab === 'incomes' ? 'Income' : 'Expense'}
+            </Text>
+          </TouchableOpacity>
             </>
           ) : (
             // Normal görünüm - yan yana

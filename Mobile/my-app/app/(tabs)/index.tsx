@@ -79,7 +79,8 @@ export default function DashboardScreen() {
           todaysCheckOuts: data?.checkInOutSummary?.todaysCheckOuts || 0
         },
         revenueSummary: {
-          todaysRevenue: data?.revenueSummary?.todaysRevenue || 0,
+          todaysRevenue: data?.revenueSummary?.revenueToday || 
+                       data?.revenueSummary?.todaysRevenue || 0,
           thisMonthRevenue: data?.revenueSummary?.thisMonthRevenue || 
                           data?.revenueSummary?.revenueThisMonth || 
                           data?.revenueSummary?.monthlyRevenue || 0,
@@ -165,28 +166,28 @@ export default function DashboardScreen() {
       <StatusBar barStyle="light-content" />
       
       {/* Custom Header with Register and Logout */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Hotel Management System</Text>
-        <View style={styles.headerButtons}>
-          {/* Conditionally render Register button based on Admin OR SuperAdmin role */}
-          {(user?.roles?.includes('Admin') || user?.roles?.includes('SuperAdmin')) && (
-            <TouchableOpacity
-              style={styles.registerButton}
-              onPress={() => setRegisterModalVisible(true)}
-            >
-              <MaterialIcons name="person-add" size={24} color="#fff" />
-              <Text style={styles.buttonText}>Register</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            style={styles.logoutButton}
-            onPress={handleLogout}
-          >
-            <MaterialIcons name="logout" size={24} color="#fff" />
-            <Text style={styles.buttonText}>Logout</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+<View style={styles.header}>
+  <Text style={styles.headerTitle}>Hotel Management System</Text>
+  <View style={styles.headerButtons}>
+    {/* Conditionally render Register button based on Admin OR SuperAdmin role */}
+    {(user?.roles?.includes('Admin') || user?.roles?.includes('SuperAdmin')) && (
+      <TouchableOpacity
+        style={styles.registerButton}
+        onPress={() => setRegisterModalVisible(true)}
+      >
+        <MaterialIcons name="person-add" size={24} color="#fff" />
+        <Text style={styles.buttonText}>Register</Text>
+      </TouchableOpacity>
+    )}
+    <TouchableOpacity
+      style={styles.logoutButton}
+      onPress={handleLogout}
+    >
+      <MaterialIcons name="logout" size={24} color="#fff" />
+      <Text style={styles.buttonText}>Logout</Text>
+    </TouchableOpacity>
+  </View>
+</View>
       
       {/* Registration Modal */}
       <Modal
@@ -318,7 +319,7 @@ export default function DashboardScreen() {
         
         {/* Daily Summary */}
         <View style={styles.summaryHeaderContainer}>
-          <Text style={styles.sectionTitle}>Today's Summary</Text>
+        <Text style={styles.sectionTitle}>Today's Summary</Text>
           {isLoadingDashboard ? null : (
             <TouchableOpacity 
               style={styles.refreshButton} 
@@ -346,67 +347,67 @@ export default function DashboardScreen() {
           </View>
         ) : (
           /* Stats Cards */
-          <View style={styles.statsContainer}>
-            {/* Rooms Card */}
-            <View style={styles.statCard}>
-              <View style={styles.statHeader}>
-                <MaterialIcons name="hotel" size={24} color="#4C3A89" />
-                <Text style={styles.statTitle}>Rooms</Text>
-              </View>
+        <View style={styles.statsContainer}>
+          {/* Rooms Card */}
+          <View style={styles.statCard}>
+            <View style={styles.statHeader}>
+              <MaterialIcons name="hotel" size={24} color="#4C3A89" />
+              <Text style={styles.statTitle}>Rooms</Text>
+            </View>
               <Text style={styles.statValue}>
                 {dashboardData.roomSummary?.availableRooms || 0}/{dashboardData.roomSummary?.totalRooms || 0}
               </Text>
-              <Text style={styles.statSubtitle}>Available rooms</Text>
-              <View style={styles.statDetails}>
+            <Text style={styles.statSubtitle}>Available rooms</Text>
+            <View style={styles.statDetails}>
                 <Text style={styles.statDetailText}>{dashboardData.roomSummary?.availableRooms || 0} available</Text>
                 <Text style={styles.statDetailText}>{dashboardData.roomSummary?.occupiedRooms || 0} occupied</Text>
                 <Text style={styles.statDetailText}>{dashboardData.roomSummary?.maintenanceRooms || 0} maintenance</Text>
-              </View>
             </View>
-            
-            {/* Check In/Out Card */}
-            <View style={styles.statCard}>
-              <View style={styles.statHeader}>
-                <MaterialIcons name="swap-horiz" size={24} color="#4CAF50" />
-                <Text style={styles.statTitle}>Check In/Out</Text>
-              </View>
-              <View style={styles.statDoubleValue}>
-                <View style={styles.statDoubleItem}>
+          </View>
+          
+          {/* Check In/Out Card */}
+          <View style={styles.statCard}>
+            <View style={styles.statHeader}>
+              <MaterialIcons name="swap-horiz" size={24} color="#4CAF50" />
+              <Text style={styles.statTitle}>Check In/Out</Text>
+            </View>
+            <View style={styles.statDoubleValue}>
+              <View style={styles.statDoubleItem}>
                   <Text style={styles.statValue}>{dashboardData.checkInOutSummary?.todaysCheckIns || 0}</Text>
-                  <Text style={styles.statSubtitle}>Today's check-ins</Text>
-                </View>
-                <View style={styles.statDoubleItem}>
+                <Text style={styles.statSubtitle}>Today's check-ins</Text>
+              </View>
+              <View style={styles.statDoubleItem}>
                   <Text style={styles.statValue}>{dashboardData.checkInOutSummary?.todaysCheckOuts || 0}</Text>
-                  <Text style={styles.statSubtitle}>Today's check-outs</Text>
-                </View>
+                <Text style={styles.statSubtitle}>Today's check-outs</Text>
               </View>
             </View>
-            
-            {/* Revenue Card */}
-            <View style={styles.statCard}>
-              <View style={styles.statHeader}>
-                <FontAwesome5 name="dollar-sign" size={20} color="#2E7D32" />
-                <Text style={styles.statTitle}>Revenue</Text>
-              </View>
+          </View>
+          
+          {/* Revenue Card */}
+          <View style={styles.statCard}>
+            <View style={styles.statHeader}>
+              <FontAwesome5 name="dollar-sign" size={20} color="#2E7D32" />
+              <Text style={styles.statTitle}>Revenue</Text>
+            </View>
               <Text style={styles.statValue}>
                 ${(dashboardData.revenueSummary?.todaysRevenue || 0).toLocaleString()}
               </Text>
-              <Text style={styles.statSubtitle}>Today's revenue</Text>
+            <Text style={styles.statSubtitle}>Today's revenue</Text>
               <Text style={styles.statDetail}>
                 This month: ${(dashboardData.revenueSummary?.thisMonthRevenue || dashboardData.revenueSummary?.revenueThisMonth || dashboardData.revenueSummary?.monthlyRevenue || 0).toLocaleString()}
               </Text>
-            </View>
-            
-            {/* Reservations Card */}
-            <View style={styles.statCard}>
-              <View style={styles.statHeader}>
-                <MaterialIcons name="event-available" size={24} color="#1976D2" />
-                <Text style={styles.statTitle}>Reservations</Text>
-              </View>
-              <Text style={styles.statValue}>{dashboardData.upcomingReservationsNext7Days || 0}</Text>
-              <Text style={styles.statSubtitle}>Next 7 days</Text>
-            </View>
           </View>
+          
+          {/* Reservations Card */}
+          <View style={styles.statCard}>
+            <View style={styles.statHeader}>
+              <MaterialIcons name="event-available" size={24} color="#1976D2" />
+              <Text style={styles.statTitle}>Reservations</Text>
+            </View>
+              <Text style={styles.statValue}>{dashboardData.upcomingReservationsNext7Days || 0}</Text>
+            <Text style={styles.statSubtitle}>Next 7 days</Text>
+          </View>
+        </View>
         )}
         
         {/* Quick Actions */}
