@@ -279,18 +279,18 @@ export default function ManageRoomsScreen() {
   const [featuresDropdownVisible, setFeaturesDropdownVisible] = useState(false);
   const [featuresInputText, setFeaturesInputText] = useState('');
   
-  // Yeni oda ekleme fonksiyonu
+  // Function to add a new room
   const handleAddRoom = async () => {
     try {
-      // Veri doğrulama
+      // Data validation
       if (!newRoom.roomNumber || !newRoom.pricePerNight) {
-        alert('Hata: Oda numarası ve gecelik ücret alanları zorunludur.');
+        alert('Error: Room number and nightly rate fields are required.');
         return;
       }
       
       setLoading(true);
       
-      // API'ye gönderilecek veri yapısını oluştur
+      // Create data structure to be sent to API
       const roomData = {
         roomNumber: parseInt(newRoom.roomNumber),
         roomType: newRoom.roomType,
@@ -309,12 +309,12 @@ export default function ManageRoomsScreen() {
       
       console.log('Oda başarıyla eklendi:', response);
       
-      // Başarılı eklemeden sonra modal'ı kapat ve odaları yeniden getir
+      // Close modal and refresh rooms after successful addition
       setNewRoomModalVisible(false);
       fetchRooms();
       
       // Kullanıcıya başarılı mesajı göster
-      alert('Başarılı: Oda başarıyla eklendi.');
+      alert('Success: Room successfully added.');
       
       // Formu sıfırla
       setNewRoom({
@@ -354,7 +354,7 @@ export default function ManageRoomsScreen() {
     }
   };
   
-  // Feature seçim fonksiyonu
+  // Feature selection function
   const toggleFeature = (feature) => {
     if (newRoom.features.includes(feature)) {
       setNewRoom({
@@ -369,9 +369,9 @@ export default function ManageRoomsScreen() {
     }
   };
   
-  // Oda düzenleme fonksiyonu
+  // Room editing function
   const handleEditRoom = (room) => {
-    // Odayı düzenleme için seç ve formu doldur
+    // Select the room for editing and fill the form
     setSelectedRoom(room);
     setNewRoom({
       roomNumber: room.roomNumber.toString(),
@@ -386,20 +386,20 @@ export default function ManageRoomsScreen() {
     setNewRoomModalVisible(true);
   };
 
-  // Odayı güncelleme fonksiyonu
+  // Room update function
   const handleUpdateRoom = async () => {
     try {
-      // Veri doğrulama
+      // Data validation
       if (!newRoom.roomNumber || !newRoom.pricePerNight) {
-        alert('Hata: Oda numarası ve gecelik ücret alanları zorunludur.');
+        alert('Error: Room number and nightly rate fields are required.');
         return;
       }
       
       setLoading(true);
       
-      // API'ye gönderilecek veri yapısını oluştur
+      // Create data structure to be sent to API
       const roomData = {
-        id: selectedRoom.id, // Güncelleme için ID gerekli
+        id: selectedRoom.id, // ID required for update
         roomNumber: parseInt(newRoom.roomNumber),
         roomType: newRoom.roomType,
         floor: parseInt(newRoom.floor),
@@ -410,21 +410,21 @@ export default function ManageRoomsScreen() {
         isOnMaintenance: selectedRoom.computedStatus === 'Maintenance'
       };
       
-      console.log('API\'ye gönderilecek güncellenmiş oda verisi:', roomData);
+      console.log('Updated room data to be sent to API:', roomData);
 
       // roomService kullanarak API isteği gönder
       const response = await roomService.updateRoom(selectedRoom.id, roomData);
       
       console.log('Oda başarıyla güncellendi:', response);
       
-      // Başarılı güncellemeden sonra modal'ı kapat ve odaları yeniden getir
+      // Close modal and refresh rooms after successful update
       setNewRoomModalVisible(false);
       setEditMode(false);
       setSelectedRoom(null);
       fetchRooms();
       
       // Kullanıcıya başarılı mesajı göster
-      alert('Başarılı: Oda başarıyla güncellendi.');
+      alert('Success: Room successfully updated.');
       
       // Formu sıfırla
       setNewRoom({
@@ -467,7 +467,7 @@ export default function ManageRoomsScreen() {
   // Function to handle room deletion
   const handleDeleteRoom = (room) => {
     // Show confirmation alert before deleting
-    const confirmDelete = confirm(`"Oda ${room.roomNumber}" silinecek. Bu işlem geri alınamaz. Devam etmek istiyor musunuz?`);
+    const confirmDelete = confirm(`"Room ${room.roomNumber}" will be deleted. This action cannot be undone. Do you want to continue?`);
     if (confirmDelete) {
       const deleteRoom = async () => {
         try {
@@ -482,7 +482,7 @@ export default function ManageRoomsScreen() {
           fetchRooms();
           
           // Show success message
-          alert('Başarılı: Oda başarıyla silindi.');
+          alert('Success: Room successfully deleted.');
         } catch (error) {
           console.error('Error deleting room:', error);
           
@@ -1478,49 +1478,15 @@ export default function ManageRoomsScreen() {
                       )}
                     </View>
                     
-                    {/* Gecelik Ücret */}
-                    <View style={styles.formGroup}>
-                      <Text style={styles.formLabel}>
-                        <Text style={styles.required}>* </Text>
-                        Gecelik Ücret (₺)
-                      </Text>
-                      <TextInput
-                        style={styles.formInput}
-                        placeholder="Ücret giriniz"
-                        value={newRoom.pricePerNight}
-                        onChangeText={(value) => setNewRoom({...newRoom, pricePerNight: value})}
-                        keyboardType="numeric"
-                      />
+                                        {/* Nightly Rate */}                    <View style={styles.formGroup}>                      <Text style={styles.formLabel}>                        <Text style={styles.required}>* </Text>                        Nightly Rate (₺)                      </Text>                      <TextInput                        style={styles.formInput}                        placeholder="Enter price"                        value={newRoom.pricePerNight}                        onChangeText={(value) => setNewRoom({...newRoom, pricePerNight: value})}                        keyboardType="numeric"                      />
                     </View>
                     
-                    {/* Açıklama */}
-                    <View style={styles.formGroup}>
-                      <Text style={styles.formLabel}>Açıklama</Text>
-                      <TextInput
-                        style={[styles.formInput, styles.textArea]}
-                        placeholder="Oda hakkında açıklama giriniz"
-                        value={newRoom.description}
-                        onChangeText={(value) => setNewRoom({...newRoom, description: value})}
-                        multiline={true}
-                        numberOfLines={4}
-                      />
+                                        {/* Description */}                    <View style={styles.formGroup}>                      <Text style={styles.formLabel}>Description</Text>                      <TextInput                        style={[styles.formInput, styles.textArea]}                        placeholder="Enter room description"                        value={newRoom.description}                        onChangeText={(value) => setNewRoom({...newRoom, description: value})}                        multiline={true}                        numberOfLines={4}                      />
                     </View>
                     
-                    {/* Özellikler */}
-                    <View style={styles.formGroup}>
-                      <Text style={styles.formLabel}>Özellikler</Text>
+                                        {/* Features */}                    <View style={styles.formGroup}>                      <Text style={styles.formLabel}>Features</Text>
                       
-                      {/* Özellik arama kutusu - tıklanınca açılacak */}
-                      <TouchableOpacity 
-                        style={styles.searchContainer}
-                        onPress={() => setFeaturesDropdownVisible(!featuresDropdownVisible)}
-                      >
-                        <Text style={styles.searchInput}>
-                          {newRoom.features.length > 0 
-                            ? `${newRoom.features.length} özellik seçildi` 
-                            : 'Özellikleri seçin'
-                          }
-                        </Text>
+                                            {/* Features search box - opens on click */}                      <TouchableOpacity                         style={styles.searchContainer}                        onPress={() => setFeaturesDropdownVisible(!featuresDropdownVisible)}                      >                        <Text style={styles.searchInput}>                          {newRoom.features.length > 0                             ? `${newRoom.features.length} features selected`                             : 'Select features'                          }                        </Text>
                         <MaterialIcons 
                           name={featuresDropdownVisible ? "keyboard-arrow-up" : "keyboard-arrow-down"} 
                           size={20} 
@@ -1567,24 +1533,9 @@ export default function ManageRoomsScreen() {
                   </ScrollView>
                   
                   <View style={styles.modalFooter}>
-                    <TouchableOpacity 
-                      style={styles.cancelButton}
-                      onPress={() => {
-                        setNewRoomModalVisible(false);
-                        if (editMode) {
-                          setEditMode(false);
-                          setSelectedRoom(null);
-                        }
-                      }}
-                    >
-                      <Text style={styles.cancelButtonText}>İptal</Text>
+                                        <TouchableOpacity                       style={styles.cancelButton}                      onPress={() => {                        setNewRoomModalVisible(false);                        if (editMode) {                          setEditMode(false);                          setSelectedRoom(null);                        }                      }}                    >                      <Text style={styles.cancelButtonText}>Cancel</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity 
-                      style={styles.submitButton}
-                      onPress={editMode ? handleUpdateRoom : handleAddRoom}
-                    >
-                      <Text style={styles.submitButtonText}>{editMode ? 'Güncelle' : 'Ekle'}</Text>
-                    </TouchableOpacity>
+                                      <TouchableOpacity                       style={styles.submitButton}                      onPress={editMode ? handleUpdateRoom : handleAddRoom}                    >                      <Text style={styles.submitButtonText}>{editMode ? 'Update' : 'Add'}</Text>                    </TouchableOpacity>
                   </View>
                 </View>
               </TouchableWithoutFeedback>
